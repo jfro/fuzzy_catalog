@@ -35,35 +35,57 @@ defmodule FuzzyCatalogWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
+    <div class="navbar bg-base-100 shadow-lg">
       <div class="flex-1">
-        <a href="/" class="flex-1 flex w-fit items-center gap-2">
-          <img src={~p"/images/logo.svg"} width="36" />
-          <span class="text-sm font-semibold">v{Application.spec(:phoenix, :vsn)}</span>
-        </a>
+        <.link navigate={~p"/"} class="btn btn-ghost normal-case text-xl">
+          <.icon name="hero-book-open" class="h-6 w-6 mr-2" />
+          FuzzyCatalog
+        </.link>
       </div>
       <div class="flex-none">
-        <ul class="flex flex-column px-1 space-x-4 items-center">
+        <ul class="menu menu-horizontal px-1">
           <li>
-            <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a>
+            <.link navigate={~p"/"} class="btn btn-ghost">
+              <.icon name="hero-home" class="h-4 w-4 mr-1" />
+              Home
+            </.link>
           </li>
           <li>
-            <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a>
+            <.link navigate={~p"/books"} class="btn btn-ghost">
+              <.icon name="hero-book-open" class="h-4 w-4 mr-1" />
+              Books
+            </.link>
           </li>
           <li>
-            <.theme_toggle />
+            <.link navigate={~p"/books/new"} class="btn btn-ghost">
+              <.icon name="hero-plus" class="h-4 w-4 mr-1" />
+              Add Book
+            </.link>
           </li>
           <li>
-            <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary">
-              Get Started <span aria-hidden="true">&rarr;</span>
-            </a>
+            <details>
+              <summary class="btn btn-ghost">
+                <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" />
+                Settings
+              </summary>
+              <ul class="p-2 bg-base-100 rounded-t-none z-50">
+                <li class="mb-2">
+                  <span class="text-xs text-base-content/60">Theme</span>
+                </li>
+                <li>
+                  <div class="px-2">
+                    <.theme_toggle />
+                  </div>
+                </li>
+              </ul>
+            </details>
           </li>
         </ul>
       </div>
-    </header>
+    </div>
 
-    <main class="px-4 py-20 sm:px-6 lg:px-8">
-      <div class="mx-auto max-w-2xl space-y-4">
+    <main class="container mx-auto px-4 py-8">
+      <div class="max-w-7xl mx-auto space-y-6">
         {render_slot(@inner_block)}
       </div>
     </main>

@@ -1,58 +1,60 @@
-<.header>
-  Books
-  <:actions>
-    <.link href={~p"/books/new"}>
-      <.button>New Book</.button>
-    </.link>
-  </:actions>
-</.header>
+<Layouts.app flash={@flash}>
+  <.header>
+    Books
+    <:actions>
+      <.link href={~p"/books/new"}>
+        <.button>New Book</.button>
+      </.link>
+    </:actions>
+  </.header>
 
-<.table id="books" rows={@books} row_click={&JS.navigate(~p"/books/#{&1}")}>
-  <:col :let={book} label="Cover">
-    <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) do %>
-      <img
-        src={cover_url}
-        alt={"Cover of #{book.title}"}
-        class="h-16 w-12 object-cover rounded shadow-sm"
-        onerror="this.style.display='none'"
-      />
-    <% else %>
-      <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
-        <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+  <.table id="books" rows={@books} row_click={&JS.navigate(~p"/books/#{&1}")}>
+    <:col :let={book} label="Cover">
+      <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) do %>
+        <img
+          src={cover_url}
+          alt={"Cover of #{book.title}"}
+          class="h-16 w-12 object-cover rounded shadow-sm"
+          onerror="this.style.display='none'"
+        />
+      <% else %>
+        <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
+          <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+        </div>
+      <% end %>
+    </:col>
+    <:col :let={book} label="Title & Author">
+      <div>
+        <div class="font-semibold">{book.title}</div>
+        <div class="text-sm text-base-content/70">{book.author}</div>
       </div>
-    <% end %>
-  </:col>
-  <:col :let={book} label="Title & Author">
-    <div>
-      <div class="font-semibold">{book.title}</div>
-      <div class="text-sm text-base-content/70">{book.author}</div>
-    </div>
-  </:col>
-  <:col :let={book} label="Identifiers">
-    <div class="text-xs space-y-1">
-      <%= if book.isbn13 do %>
-        <div><span class="font-mono">ISBN-13:</span> {book.isbn13}</div>
-      <% end %>
-      <%= if book.isbn10 do %>
-        <div><span class="font-mono">ISBN-10:</span> {book.isbn10}</div>
-      <% end %>
-      <%= if book.upc do %>
-        <div><span class="font-mono">UPC:</span> {book.upc}</div>
-      <% end %>
-      <%= if book.amazon_asin do %>
-        <div><span class="font-mono">ASIN:</span> {book.amazon_asin}</div>
-      <% end %>
-    </div>
-  </:col>
-  <:action :let={book}>
-    <div class="sr-only">
-      <.link navigate={~p"/books/#{book}"}>Show</.link>
-    </div>
-    <.link navigate={~p"/books/#{book}/edit"}>Edit</.link>
-  </:action>
-  <:action :let={book}>
-    <.link href={~p"/books/#{book}"} method="delete" data-confirm="Are you sure?">
-      Delete
-    </.link>
-  </:action>
-</.table>
+    </:col>
+    <:col :let={book} label="Identifiers">
+      <div class="text-xs space-y-1">
+        <%= if book.isbn13 do %>
+          <div><span class="font-mono">ISBN-13:</span> {book.isbn13}</div>
+        <% end %>
+        <%= if book.isbn10 do %>
+          <div><span class="font-mono">ISBN-10:</span> {book.isbn10}</div>
+        <% end %>
+        <%= if book.upc do %>
+          <div><span class="font-mono">UPC:</span> {book.upc}</div>
+        <% end %>
+        <%= if book.amazon_asin do %>
+          <div><span class="font-mono">ASIN:</span> {book.amazon_asin}</div>
+        <% end %>
+      </div>
+    </:col>
+    <:action :let={book}>
+      <div class="sr-only">
+        <.link navigate={~p"/books/#{book}"}>Show</.link>
+      </div>
+      <.link navigate={~p"/books/#{book}/edit"}>Edit</.link>
+    </:action>
+    <:action :let={book}>
+      <.link href={~p"/books/#{book}"} method="delete" data-confirm="Are you sure?">
+        Delete
+      </.link>
+    </:action>
+  </.table>
+</Layouts.app>

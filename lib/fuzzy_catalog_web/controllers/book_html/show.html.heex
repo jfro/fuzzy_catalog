@@ -1,4 +1,5 @@
-<.header>
+<Layouts.app flash={@flash}>
+  <.header>
   {@book.title}
   <:subtitle>by {@book.author}</:subtitle>
   <:actions>
@@ -46,6 +47,7 @@
   </div>
 </div>
 
-<div class="mt-4">
-  <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
-</div>
+  <div class="mt-4">
+    <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+  </div>
+</Layouts.app>

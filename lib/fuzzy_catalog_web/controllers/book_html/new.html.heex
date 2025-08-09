@@ -1,90 +1,126 @@
-<.header>
-  New Book
-  <:subtitle>Add a new book to your catalog or lookup from Open Library</:subtitle>
-</.header>
+<Layouts.app flash={@flash}>
+  <.header>
+    New Book
+    <:subtitle>Add a new book to your catalog or lookup from Open Library</:subtitle>
+  </.header>
 
-<!-- Book Lookup Section -->
+<!-- Book Lookup Section with Tabs -->
 <div class="card bg-base-200 mb-6">
   <div class="card-body">
     <h3 class="card-title">Lookup Book Information</h3>
     <p class="text-sm text-base-content/70 mb-4">
-      Search for book details using barcode scanning, ISBN, UPC, or title to auto-fill the form below.
+      Choose a method to search for book details and auto-fill the form below.
     </p>
     
-<!-- Barcode Scanner Section -->
-    <div class="mb-4 p-4 bg-primary/10 rounded-lg border border-primary/20">
-      <div class="flex items-center gap-3 mb-3">
-        <.icon name="hero-camera" class="h-6 w-6 text-primary" />
-        <h4 class="font-semibold text-primary">Scan Barcode</h4>
+    <!-- Tab Navigation -->
+    <div role="tablist" class="tabs tabs-bordered mb-4">
+      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="Scan Barcode" id="tab-scan" checked />
+      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <.icon name="hero-camera" class="h-6 w-6 text-primary" />
+          <h4 class="font-semibold text-primary">Scan Barcode</h4>
+        </div>
+        <p class="text-sm text-base-content/70 mb-4">
+          Use your camera to scan the ISBN barcode on the back of a book for instant lookup. Works with EAN-13, ISBN-10, and ISBN-13 barcodes.
+        </p>
+        <.button
+          type="button"
+          onclick="openBarcodeScanner()"
+          class="btn btn-primary"
+          id="scan-barcode-btn"
+        >
+          <.icon name="hero-qr-code" class="h-4 w-4 mr-2" /> Start Camera Scanner
+        </.button>
       </div>
-      <p class="text-sm text-base-content/70 mb-3">
-        Use your camera to scan the ISBN barcode on the back of a book for instant lookup. Works with EAN-13, ISBN-10, and ISBN-13 barcodes.
-      </p>
-      <.button
-        type="button"
-        onclick="openBarcodeScanner()"
-        class="btn btn-sm btn-primary"
-        id="scan-barcode-btn"
-      >
-        <.icon name="hero-qr-code" class="h-4 w-4 mr-2" /> Scan Barcode
-      </.button>
+
+      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="ISBN Lookup" id="tab-isbn" />
+      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+          <div class="flex items-center gap-3 mb-3">
+            <.icon name="hero-hashtag" class="h-6 w-6 text-primary" />
+            <h4 class="font-semibold text-primary">ISBN Lookup</h4>
+          </div>
+          <p class="text-sm text-base-content/70 mb-4">
+            Enter a 10 or 13-digit ISBN to find book information from Open Library.
+          </p>
+          <div class="space-y-3">
+            <.input
+              field={lf[:isbn]}
+              type="text"
+              label="ISBN (10 or 13 digits)"
+              placeholder="e.g., 0451526538 or 9780451526533"
+              id="isbn-input"
+            />
+            <.button
+              type="submit"
+              name="lookup_type"
+              value="isbn"
+              class="btn btn-primary"
+            >
+              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by ISBN
+            </.button>
+          </div>
+        </.form>
+      </div>
+
+      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="Title Search" id="tab-title" />
+      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+          <div class="flex items-center gap-3 mb-3">
+            <.icon name="hero-book-open" class="h-6 w-6 text-primary" />
+            <h4 class="font-semibold text-primary">Title Search</h4>
+          </div>
+          <p class="text-sm text-base-content/70 mb-4">
+            Search for a book by its title to find multiple matching results.
+          </p>
+          <div class="space-y-3">
+            <.input
+              field={lf[:title]}
+              type="text"
+              label="Book Title"
+              placeholder="e.g., Lord of the Rings"
+            />
+            <.button
+              type="submit"
+              name="lookup_type"
+              value="title"
+              class="btn btn-primary"
+            >
+              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Search by Title
+            </.button>
+          </div>
+        </.form>
+      </div>
+
+      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="UPC Lookup" id="tab-upc" />
+      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+          <div class="flex items-center gap-3 mb-3">
+            <.icon name="hero-qr-code" class="h-6 w-6 text-primary" />
+            <h4 class="font-semibold text-primary">UPC Barcode</h4>
+          </div>
+          <p class="text-sm text-base-content/70 mb-4">
+            Enter a UPC barcode number to lookup book information.
+          </p>
+          <div class="space-y-3">
+            <.input
+              field={lf[:upc]}
+              type="text"
+              label="UPC Barcode"
+              placeholder="e.g., 123456789012"
+            />
+            <.button
+              type="submit"
+              name="lookup_type"
+              value="upc"
+              class="btn btn-primary"
+            >
+              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by UPC
+            </.button>
+          </div>
+        </.form>
+      </div>
     </div>
-
-    <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post" class="space-y-3">
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div>
-          <.input
-            field={lf[:isbn]}
-            type="text"
-            label="ISBN (10 or 13 digits)"
-            placeholder="e.g., 0451526538"
-            id="isbn-input"
-          />
-          <.button
-            type="submit"
-            name="lookup_type"
-            value="isbn"
-            class="btn btn-sm btn-primary mt-2 w-full"
-          >
-            Lookup by ISBN
-          </.button>
-        </div>
-
-        <div>
-          <.input
-            field={lf[:upc]}
-            type="text"
-            label="UPC Barcode"
-            placeholder="e.g., 123456789012"
-          />
-          <.button
-            type="submit"
-            name="lookup_type"
-            value="upc"
-            class="btn btn-sm btn-primary mt-2 w-full"
-          >
-            Lookup by UPC
-          </.button>
-        </div>
-
-        <div>
-          <.input
-            field={lf[:title]}
-            type="text"
-            label="Book Title"
-            placeholder="e.g., Lord of the Rings"
-          />
-          <.button
-            type="submit"
-            name="lookup_type"
-            value="title"
-            class="btn btn-sm btn-primary mt-2 w-full"
-          >
-            Lookup by Title
-          </.button>
-        </div>
-      </div>
-    </.form>
   </div>
 </div>
 
@@ -217,6 +253,7 @@
 <div class="mt-4">
   <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
 </div>
+</Layouts.app>
 
 <script>
   let barcodeScanner = null;
