@@ -1,258 +1,292 @@
-<Layouts.app flash={@flash}>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>
     New Book
     <:subtitle>Add a new book to your catalog or lookup from Open Library</:subtitle>
   </.header>
-
+  
 <!-- Book Lookup Section with Tabs -->
-<div class="card bg-base-200 mb-6">
-  <div class="card-body">
-    <h3 class="card-title">Lookup Book Information</h3>
-    <p class="text-sm text-base-content/70 mb-4">
-      Choose a method to search for book details and auto-fill the form below.
-    </p>
-    
-    <!-- Tab Navigation -->
-    <div role="tablist" class="tabs tabs-bordered mb-4">
-      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="Scan Barcode" id="tab-scan" checked />
-      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-        <div class="flex items-center gap-3 mb-3">
-          <.icon name="hero-camera" class="h-6 w-6 text-primary" />
-          <h4 class="font-semibold text-primary">Scan Barcode</h4>
-        </div>
-        <p class="text-sm text-base-content/70 mb-4">
-          Use your camera to scan the ISBN barcode on the back of a book for instant lookup. Works with EAN-13, ISBN-10, and ISBN-13 barcodes.
-        </p>
-        <.button
-          type="button"
-          onclick="openBarcodeScanner()"
-          class="btn btn-primary"
-          id="scan-barcode-btn"
-        >
-          <.icon name="hero-qr-code" class="h-4 w-4 mr-2" /> Start Camera Scanner
-        </.button>
-      </div>
-
-      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="ISBN Lookup" id="tab-isbn" />
-      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
-          <div class="flex items-center gap-3 mb-3">
-            <.icon name="hero-hashtag" class="h-6 w-6 text-primary" />
-            <h4 class="font-semibold text-primary">ISBN Lookup</h4>
-          </div>
-          <p class="text-sm text-base-content/70 mb-4">
-            Enter a 10 or 13-digit ISBN to find book information from Open Library.
-          </p>
-          <div class="space-y-3">
-            <.input
-              field={lf[:isbn]}
-              type="text"
-              label="ISBN (10 or 13 digits)"
-              placeholder="e.g., 0451526538 or 9780451526533"
-              id="isbn-input"
-            />
-            <.button
-              type="submit"
-              name="lookup_type"
-              value="isbn"
-              class="btn btn-primary"
-            >
-              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by ISBN
-            </.button>
-          </div>
-        </.form>
-      </div>
-
-      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="Title Search" id="tab-title" />
-      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
-          <div class="flex items-center gap-3 mb-3">
-            <.icon name="hero-book-open" class="h-6 w-6 text-primary" />
-            <h4 class="font-semibold text-primary">Title Search</h4>
-          </div>
-          <p class="text-sm text-base-content/70 mb-4">
-            Search for a book by its title to find multiple matching results.
-          </p>
-          <div class="space-y-3">
-            <.input
-              field={lf[:title]}
-              type="text"
-              label="Book Title"
-              placeholder="e.g., Lord of the Rings"
-            />
-            <.button
-              type="submit"
-              name="lookup_type"
-              value="title"
-              class="btn btn-primary"
-            >
-              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Search by Title
-            </.button>
-          </div>
-        </.form>
-      </div>
-
-      <input type="radio" name="lookup_tabs" role="tab" class="tab" aria-label="UPC Lookup" id="tab-upc" />
-      <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
-        <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
-          <div class="flex items-center gap-3 mb-3">
-            <.icon name="hero-qr-code" class="h-6 w-6 text-primary" />
-            <h4 class="font-semibold text-primary">UPC Barcode</h4>
-          </div>
-          <p class="text-sm text-base-content/70 mb-4">
-            Enter a UPC barcode number to lookup book information.
-          </p>
-          <div class="space-y-3">
-            <.input
-              field={lf[:upc]}
-              type="text"
-              label="UPC Barcode"
-              placeholder="e.g., 123456789012"
-            />
-            <.button
-              type="submit"
-              name="lookup_type"
-              value="upc"
-              class="btn btn-primary"
-            >
-              <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by UPC
-            </.button>
-          </div>
-        </.form>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Barcode Scanner Modal -->
-<div id="barcode-scanner-modal" class="modal">
-  <div class="modal-box max-w-4xl">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="font-bold text-lg">Scan Book Barcode</h3>
-      <button class="btn btn-sm btn-circle btn-ghost" onclick="closeBarcodeScanner()">✕</button>
-    </div>
-
-    <div class="space-y-4">
-      <div class="alert alert-info">
-        <.icon name="hero-information-circle" class="h-5 w-5" />
-        <span>
-          Position the barcode within the scanning area. Make sure there's good lighting.
-        </span>
-      </div>
-
-      <div id="barcode-scanner-container" class="relative bg-black rounded-lg overflow-hidden">
-        <div id="barcode-scanner" class="w-full h-[600px]"></div>
-        
-<!-- Scanning overlay -->
-        <div class="absolute inset-0 pointer-events-none">
-          <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-40 border-2 border-primary border-dashed rounded-lg">
-          </div>
-          <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded text-sm">
-            Point ISBN barcode at center area
-          </div>
-          <div class="absolute top-4 left-4 text-white bg-black/50 px-2 py-1 rounded text-xs" id="debug-info">
-            Initializing...
-          </div>
-        </div>
-      </div>
-
-      <div class="flex justify-between">
-        <button class="btn btn-outline" onclick="closeBarcodeScanner()">Cancel</button>
-        <div class="text-sm text-base-content/70" id="scanner-status">
-          Initializing camera...
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Lookup Results Display -->
-<%= if assigns[:lookup_results] do %>
-  <div class="card bg-base-100 border border-primary mb-6">
+  <div class="card bg-base-200 mb-6">
     <div class="card-body">
-      <h3 class="card-title text-primary">Lookup Results</h3>
-      <%= if is_list(@lookup_results) do %>
-        <div class="space-y-2">
-          <%= for {book, index} <- Enum.with_index(@lookup_results) do %>
-            <div class="border rounded-lg p-3 hover:bg-base-50">
-              <div class="flex justify-between items-start">
-                <div>
-                  <h4 class="font-semibold">{book.title}</h4>
-                  <p class="text-sm text-base-content/70">by {book.author}</p>
-                  <%= if book.publish_year do %>
-                    <p class="text-xs text-base-content/60">Published: {book.publish_year}</p>
-                  <% end %>
-                </div>
-                <.form :let={_f} for={%{}} action={~p"/books/new"} method="get">
-                  <input type="hidden" name="title" value={book.title} />
-                  <input type="hidden" name="author" value={book.author} />
-                  <input type="hidden" name="isbn10" value={book.isbn10 || ""} />
-                  <input type="hidden" name="isbn13" value={book.isbn13 || ""} />
-                  <input type="hidden" name="cover_url" value={book.cover_url || ""} />
-                  <.button type="submit" class="btn btn-xs btn-outline">Use This Book</.button>
-                </.form>
-              </div>
-            </div>
-          <% end %>
+      <h3 class="card-title">Lookup Book Information</h3>
+      <p class="text-sm text-base-content/70 mb-4">
+        Choose a method to search for book details and auto-fill the form below.
+      </p>
+      
+<!-- Tab Navigation -->
+      <div role="tablist" class="tabs tabs-bordered mb-4">
+        <input
+          type="radio"
+          name="lookup_tabs"
+          role="tab"
+          class="tab"
+          aria-label="Scan Barcode"
+          id="tab-scan"
+          checked
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+          <div class="flex items-center gap-3 mb-3">
+            <.icon name="hero-camera" class="h-6 w-6 text-primary" />
+            <h4 class="font-semibold text-primary">Scan Barcode</h4>
+          </div>
+          <p class="text-sm text-base-content/70 mb-4">
+            Use your camera to scan the ISBN barcode on the back of a book for instant lookup. Works with EAN-13, ISBN-10, and ISBN-13 barcodes.
+          </p>
+          <.button
+            type="button"
+            onclick="openBarcodeScanner()"
+            class="btn btn-primary"
+            id="scan-barcode-btn"
+          >
+            <.icon name="hero-qr-code" class="h-4 w-4 mr-2" /> Start Camera Scanner
+          </.button>
         </div>
-      <% else %>
-        <div class="border rounded-lg p-3">
-          <h4 class="font-semibold">{@lookup_results.title}</h4>
-          <p class="text-sm text-base-content/70">by {@lookup_results.author}</p>
-          <%= if @lookup_results.publish_year do %>
-            <p class="text-xs text-base-content/60">Published: {@lookup_results.publish_year}</p>
-          <% end %>
-          <.form :let={_f} for={%{}} action={~p"/books/new"} method="get" class="mt-2">
-            <input type="hidden" name="title" value={@lookup_results.title} />
-            <input type="hidden" name="author" value={@lookup_results.author} />
-            <input type="hidden" name="isbn10" value={@lookup_results.isbn10 || ""} />
-            <input type="hidden" name="isbn13" value={@lookup_results.isbn13 || ""} />
-            <input type="hidden" name="cover_url" value={@lookup_results.cover_url || ""} />
-            <.button type="submit" class="btn btn-sm btn-primary">Use This Book</.button>
+
+        <input
+          type="radio"
+          name="lookup_tabs"
+          role="tab"
+          class="tab"
+          aria-label="ISBN Lookup"
+          id="tab-isbn"
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+          <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+            <div class="flex items-center gap-3 mb-3">
+              <.icon name="hero-hashtag" class="h-6 w-6 text-primary" />
+              <h4 class="font-semibold text-primary">ISBN Lookup</h4>
+            </div>
+            <p class="text-sm text-base-content/70 mb-4">
+              Enter a 10 or 13-digit ISBN to find book information from Open Library.
+            </p>
+            <div class="space-y-3">
+              <.input
+                field={lf[:isbn]}
+                type="text"
+                label="ISBN (10 or 13 digits)"
+                placeholder="e.g., 0451526538 or 9780451526533"
+                id="isbn-input"
+              />
+              <.button
+                type="submit"
+                name="lookup_type"
+                value="isbn"
+                class="btn btn-primary"
+              >
+                <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by ISBN
+              </.button>
+            </div>
           </.form>
         </div>
-      <% end %>
+
+        <input
+          type="radio"
+          name="lookup_tabs"
+          role="tab"
+          class="tab"
+          aria-label="Title Search"
+          id="tab-title"
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+          <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+            <div class="flex items-center gap-3 mb-3">
+              <.icon name="hero-book-open" class="h-6 w-6 text-primary" />
+              <h4 class="font-semibold text-primary">Title Search</h4>
+            </div>
+            <p class="text-sm text-base-content/70 mb-4">
+              Search for a book by its title to find multiple matching results.
+            </p>
+            <div class="space-y-3">
+              <.input
+                field={lf[:title]}
+                type="text"
+                label="Book Title"
+                placeholder="e.g., Lord of the Rings"
+              />
+              <.button
+                type="submit"
+                name="lookup_type"
+                value="title"
+                class="btn btn-primary"
+              >
+                <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Search by Title
+              </.button>
+            </div>
+          </.form>
+        </div>
+
+        <input
+          type="radio"
+          name="lookup_tabs"
+          role="tab"
+          class="tab"
+          aria-label="UPC Lookup"
+          id="tab-upc"
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+          <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post">
+            <div class="flex items-center gap-3 mb-3">
+              <.icon name="hero-qr-code" class="h-6 w-6 text-primary" />
+              <h4 class="font-semibold text-primary">UPC Barcode</h4>
+            </div>
+            <p class="text-sm text-base-content/70 mb-4">
+              Enter a UPC barcode number to lookup book information.
+            </p>
+            <div class="space-y-3">
+              <.input
+                field={lf[:upc]}
+                type="text"
+                label="UPC Barcode"
+                placeholder="e.g., 123456789012"
+              />
+              <.button
+                type="submit"
+                name="lookup_type"
+                value="upc"
+                class="btn btn-primary"
+              >
+                <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Lookup by UPC
+              </.button>
+            </div>
+          </.form>
+        </div>
+      </div>
     </div>
   </div>
-<% end %>
+  
+<!-- Barcode Scanner Modal -->
+  <div id="barcode-scanner-modal" class="modal">
+    <div class="modal-box max-w-4xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-bold text-lg">Scan Book Barcode</h3>
+        <button class="btn btn-sm btn-circle btn-ghost" onclick="closeBarcodeScanner()">✕</button>
+      </div>
 
-<!-- Lookup Error Display -->
-<%= if assigns[:lookup_error] do %>
-  <div class="alert alert-warning mb-6">
-    <p>{@lookup_error}</p>
+      <div class="space-y-4">
+        <div class="alert alert-info">
+          <.icon name="hero-information-circle" class="h-5 w-5" />
+          <span>
+            Position the barcode within the scanning area. Make sure there's good lighting.
+          </span>
+        </div>
+
+        <div id="barcode-scanner-container" class="relative bg-black rounded-lg overflow-hidden">
+          <div id="barcode-scanner" class="w-full h-[600px]"></div>
+          
+<!-- Scanning overlay -->
+          <div class="absolute inset-0 pointer-events-none">
+            <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 h-40 border-2 border-primary border-dashed rounded-lg">
+            </div>
+            <div class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black/50 px-3 py-1 rounded text-sm">
+              Point ISBN barcode at center area
+            </div>
+            <div
+              class="absolute top-4 left-4 text-white bg-black/50 px-2 py-1 rounded text-xs"
+              id="debug-info"
+            >
+              Initializing...
+            </div>
+          </div>
+        </div>
+
+        <div class="flex justify-between">
+          <button class="btn btn-outline" onclick="closeBarcodeScanner()">Cancel</button>
+          <div class="text-sm text-base-content/70" id="scanner-status">
+            Initializing camera...
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
-<% end %>
-
-<.form :let={f} for={@changeset} action={~p"/books"} id="book-form">
-  <%= if @changeset.action do %>
-    <div class="alert alert-error mb-4">
-      <p>Oops, something went wrong! Please check the errors below.</p>
+  
+<!-- Lookup Results Display -->
+  <%= if assigns[:lookup_results] do %>
+    <div class="card bg-base-100 border border-primary mb-6">
+      <div class="card-body">
+        <h3 class="card-title text-primary">Lookup Results</h3>
+        <%= if is_list(@lookup_results) do %>
+          <div class="space-y-2">
+            <%= for {book, index} <- Enum.with_index(@lookup_results) do %>
+              <div class="border rounded-lg p-3 hover:bg-base-50">
+                <div class="flex justify-between items-start">
+                  <div>
+                    <h4 class="font-semibold">{book.title}</h4>
+                    <p class="text-sm text-base-content/70">by {book.author}</p>
+                    <%= if book.publication_date do %>
+                      <p class="text-xs text-base-content/60">Published: {book.publication_date.year}</p>
+                    <% end %>
+                  </div>
+                  <.form :let={_f} for={%{}} action={~p"/books/new"} method="get">
+                    <input type="hidden" name="title" value={book.title} />
+                    <input type="hidden" name="author" value={book.author} />
+                    <input type="hidden" name="isbn10" value={book.isbn10 || ""} />
+                    <input type="hidden" name="isbn13" value={book.isbn13 || ""} />
+                    <input type="hidden" name="cover_url" value={book.cover_url || ""} />
+                    <.button type="submit" class="btn btn-xs btn-outline">Use This Book</.button>
+                  </.form>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        <% else %>
+          <div class="border rounded-lg p-3">
+            <h4 class="font-semibold">{@lookup_results.title}</h4>
+            <p class="text-sm text-base-content/70">by {@lookup_results.author}</p>
+            <%= if @lookup_results.publication_date do %>
+              <p class="text-xs text-base-content/60">
+                Published: {@lookup_results.publication_date.year}
+              </p>
+            <% end %>
+            <.form :let={_f} for={%{}} action={~p"/books/new"} method="get" class="mt-2">
+              <input type="hidden" name="title" value={@lookup_results.title} />
+              <input type="hidden" name="author" value={@lookup_results.author} />
+              <input type="hidden" name="isbn10" value={@lookup_results.isbn10 || ""} />
+              <input type="hidden" name="isbn13" value={@lookup_results.isbn13 || ""} />
+              <input type="hidden" name="cover_url" value={@lookup_results.cover_url || ""} />
+              <.button type="submit" class="btn btn-sm btn-primary">Use This Book</.button>
+            </.form>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+  
+<!-- Lookup Error Display -->
+  <%= if assigns[:lookup_error] do %>
+    <div class="alert alert-warning mb-6">
+      <p>{@lookup_error}</p>
     </div>
   <% end %>
 
-  <div class="space-y-4">
-    <.input field={f[:title]} type="text" label="Title" required />
-    <.input field={f[:author]} type="text" label="Author" required />
-    <.input field={f[:upc]} type="text" label="UPC" />
-    <.input field={f[:isbn10]} type="text" label="ISBN-10" />
-    <.input field={f[:isbn13]} type="text" label="ISBN-13" />
-    <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
-    <.input
-      field={f[:cover_url]}
-      type="url"
-      label="Cover Image URL (optional)"
-      placeholder="https://example.com/cover.jpg"
-    />
-  </div>
+  <.form :let={f} for={@changeset} action={~p"/books"} id="book-form">
+    <%= if @changeset.action do %>
+      <div class="alert alert-error mb-4">
+        <p>Oops, something went wrong! Please check the errors below.</p>
+      </div>
+    <% end %>
 
-  <div class="mt-6">
-    <.button type="submit">Save Book</.button>
-  </div>
-</.form>
+    <div class="space-y-4">
+      <.input field={f[:title]} type="text" label="Title" required />
+      <.input field={f[:author]} type="text" label="Author" required />
+      <.input field={f[:upc]} type="text" label="UPC" />
+      <.input field={f[:isbn10]} type="text" label="ISBN-10" />
+      <.input field={f[:isbn13]} type="text" label="ISBN-13" />
+      <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
+      <.input
+        field={f[:cover_url]}
+        type="url"
+        label="Cover Image URL (optional)"
+        placeholder="https://example.com/cover.jpg"
+      />
+    </div>
 
-<div class="mt-4">
-  <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
-</div>
+    <div class="mt-6">
+      <.button type="submit">Save Book</.button>
+    </div>
+  </.form>
+
+  <div class="mt-4">
+    <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+  </div>
 </Layouts.app>
 
 <script>

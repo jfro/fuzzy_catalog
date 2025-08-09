@@ -25,6 +25,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
         case make_request(url) do
           {:ok, response} ->
             parse_book_response(response, bibkey)
+
           {:error, reason} ->
             {:error, reason}
         end
@@ -49,6 +50,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
         case make_request(url) do
           {:ok, response} ->
             parse_search_response(response)
+
           {:error, reason} ->
             {:error, reason}
         end
@@ -66,6 +68,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
       case make_request(url) do
         {:ok, response} ->
           parse_search_response(response)
+
         {:error, reason} ->
           {:error, reason}
       end
@@ -85,8 +88,10 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     case Req.get(url, headers: [{"User-Agent", "FuzzyCatalog/1.0"}]) do
       {:ok, %{status: 200, body: body}} ->
         {:ok, body}
+
       {:ok, %{status: status}} ->
         {:error, "HTTP #{status}"}
+
       {:error, reason} ->
         Logger.error("OpenLibrary: Request failed: #{inspect(reason)}")
         {:error, "Network error"}
@@ -97,8 +102,10 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     cond do
       String.length(isbn) == 10 and Regex.match?(~r/^[0-9]{9}[0-9X]$/, isbn) ->
         :valid
+
       String.length(isbn) == 13 and Regex.match?(~r/^[0-9]{13}$/, isbn) ->
         :valid
+
       true ->
         :invalid
     end
@@ -108,6 +115,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     case response do
       %{^bibkey => book_data} ->
         {:ok, normalize_book_data(book_data)}
+
       _ ->
         {:error, "Book not found"}
     end
@@ -168,6 +176,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp generate_cover_url(nil), do: nil
   defp generate_cover_url(""), do: nil
+
   defp generate_cover_url(isbn) when is_binary(isbn) do
     clean_isbn = String.replace(isbn, ~r/[^0-9X]/, "")
     "#{@covers_api_url}/b/isbn/#{clean_isbn}-M.jpg"
@@ -175,6 +184,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp extract_authors(nil), do: "Unknown Author"
   defp extract_authors([]), do: "Unknown Author"
+
   defp extract_authors(authors) when is_list(authors) do
     authors
     |> Enum.map(fn author -> author["name"] || "Unknown" end)
@@ -183,6 +193,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp extract_author_names(nil), do: "Unknown Author"
   defp extract_author_names([]), do: "Unknown Author"
+
   defp extract_author_names(names) when is_list(names) do
     Enum.join(names, ", ")
   end
@@ -196,25 +207,31 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp extract_isbn_from_list(nil, _length), do: nil
   defp extract_isbn_from_list([], _length), do: nil
+
   defp extract_isbn_from_list(isbns, length) when is_list(isbns) do
-    Enum.find(isbns, fn isbn -> 
-      String.length(String.replace(isbn, ~r/[^0-9X]/, "")) == length 
+    Enum.find(isbns, fn isbn ->
+      String.length(String.replace(isbn, ~r/[^0-9X]/, "")) == length
     end)
   end
 
   defp extract_first_publisher(nil), do: nil
   defp extract_first_publisher([]), do: nil
+
   defp extract_first_publisher([publisher | _]) when is_map(publisher) do
     publisher["name"]
   end
+
   defp extract_first_publisher([publisher | _]) when is_binary(publisher) do
     publisher
   end
 
   defp extract_publish_date(nil), do: nil
+
   defp extract_publish_date(date) when is_binary(date) do
     case Date.from_iso8601(date) do
-      {:ok, parsed_date} -> parsed_date
+      {:ok, parsed_date} ->
+        parsed_date
+
       {:error, _} ->
         # Try to parse just the year if full date parsing fails
         case Regex.run(~r/\d{4}/, date) do
@@ -229,8 +246,10 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     case doc["publish_date"] do
       dates when is_list(dates) and length(dates) > 0 ->
         extract_publish_date(List.first(dates))
+
       date when is_binary(date) ->
         extract_publish_date(date)
+
       _ ->
         case doc["first_publish_year"] do
           year when is_integer(year) -> Date.new!(year, 1, 1)
@@ -249,9 +268,11 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp extract_subjects(nil), do: nil
   defp extract_subjects([]), do: nil
+
   defp extract_subjects(subjects) when is_list(subjects) do
     subjects
-    |> Enum.take(3)  # Limit to first 3 subjects
+    # Limit to first 3 subjects
+    |> Enum.take(3)
     |> Enum.map(fn
       %{"name" => name} when is_binary(name) -> name
       subject when is_binary(subject) -> subject
@@ -266,9 +287,11 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
   defp extract_search_subjects(nil), do: nil
   defp extract_search_subjects([]), do: nil
+
   defp extract_search_subjects(subjects) when is_list(subjects) do
     subjects
-    |> Enum.take(3)  # Limit to first 3 subjects
+    # Limit to first 3 subjects
+    |> Enum.take(3)
     |> Enum.join(", ")
   end
 

@@ -8,7 +8,7 @@ defmodule FuzzyCatalog.Repo.Migrations.AddBookFields do
       add :publication_date, :date
       add :pages, :integer
       add :genre, :string
-      
+
       # Content Details
       add :subtitle, :string
       add :description, :text

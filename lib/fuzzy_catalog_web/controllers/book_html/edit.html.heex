@@ -1,61 +1,61 @@
-<Layouts.app flash={@flash}>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>
-  Edit: {@book.title}
-  <:subtitle>Update book information</:subtitle>
-</.header>
+    Edit: {@book.title}
+    <:subtitle>Update book information</:subtitle>
+  </.header>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-  <!-- Book Cover Preview -->
-  <div class="md:col-span-1">
-    <h3 class="text-lg font-semibold mb-3">Cover Preview</h3>
-    <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(@book.isbn13 || @book.isbn10, :medium) do %>
-      <img
-        src={cover_url}
-        alt={"Cover of #{@book.title}"}
-        class="w-full max-w-sm mx-auto rounded-lg shadow-md"
-        onerror="this.parentNode.innerHTML='<div class=&quot;w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center&quot;><div class=&quot;text-center&quot;><svg class=&quot;h-12 w-12 text-base-content/50 mx-auto mb-2&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; viewBox=&quot;0 0 24 24&quot;><path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253&quot;></path></svg><div class=&quot;text-sm text-base-content/60&quot;>No cover available</div></div></div>'"
-      />
-    <% else %>
-      <div class="w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center">
-        <div class="text-center">
-          <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50 mx-auto mb-2" />
-          <div class="text-sm text-base-content/60">No cover available</div>
-        </div>
-      </div>
-    <% end %>
-  </div>
-  
-<!-- Edit Form -->
-  <div class="md:col-span-3">
-    <.form :let={f} for={@changeset} action={~p"/books/#{@book}"} method="put" id="book-form">
-      <%= if @changeset.action do %>
-        <div class="alert alert-error mb-4">
-          <p>Oops, something went wrong! Please check the errors below.</p>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <!-- Book Cover Preview -->
+    <div class="md:col-span-1">
+      <h3 class="text-lg font-semibold mb-3">Cover Preview</h3>
+      <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(@book.isbn13 || @book.isbn10, :medium) do %>
+        <img
+          src={cover_url}
+          alt={"Cover of #{@book.title}"}
+          class="w-full max-w-sm mx-auto rounded-lg shadow-md"
+          onerror="this.parentNode.innerHTML='<div class=&quot;w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center&quot;><div class=&quot;text-center&quot;><svg class=&quot;h-12 w-12 text-base-content/50 mx-auto mb-2&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; viewBox=&quot;0 0 24 24&quot;><path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253&quot;></path></svg><div class=&quot;text-sm text-base-content/60&quot;>No cover available</div></div></div>'"
+        />
+      <% else %>
+        <div class="w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center">
+          <div class="text-center">
+            <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50 mx-auto mb-2" />
+            <div class="text-sm text-base-content/60">No cover available</div>
+          </div>
         </div>
       <% end %>
+    </div>
+    
+<!-- Edit Form -->
+    <div class="md:col-span-3">
+      <.form :let={f} for={@changeset} action={~p"/books/#{@book}"} method="put" id="book-form">
+        <%= if @changeset.action do %>
+          <div class="alert alert-error mb-4">
+            <p>Oops, something went wrong! Please check the errors below.</p>
+          </div>
+        <% end %>
 
-      <div class="space-y-4">
-        <.input field={f[:title]} type="text" label="Title" required />
-        <.input field={f[:author]} type="text" label="Author" required />
-        <.input field={f[:upc]} type="text" label="UPC" />
-        <.input field={f[:isbn10]} type="text" label="ISBN-10" />
-        <.input field={f[:isbn13]} type="text" label="ISBN-13" />
-        <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
-        <.input
-          field={f[:cover_url]}
-          type="url"
-          label="Cover Image URL (optional)"
-          placeholder="https://example.com/cover.jpg"
-        />
-      </div>
+        <div class="space-y-4">
+          <.input field={f[:title]} type="text" label="Title" required />
+          <.input field={f[:author]} type="text" label="Author" required />
+          <.input field={f[:upc]} type="text" label="UPC" />
+          <.input field={f[:isbn10]} type="text" label="ISBN-10" />
+          <.input field={f[:isbn13]} type="text" label="ISBN-13" />
+          <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
+          <.input
+            field={f[:cover_url]}
+            type="url"
+            label="Cover Image URL (optional)"
+            placeholder="https://example.com/cover.jpg"
+          />
+        </div>
 
-      <div class="mt-6 flex gap-3">
-        <.button type="submit">Save Book</.button>
-        <.link navigate={~p"/books/#{@book}"} class="btn btn-outline">Cancel</.link>
-      </div>
-    </.form>
+        <div class="mt-6 flex gap-3">
+          <.button type="submit">Save Book</.button>
+          <.link navigate={~p"/books/#{@book}"} class="btn btn-outline">Cancel</.link>
+        </div>
+      </.form>
+    </div>
   </div>
-</div>
 
   <div class="mt-4">
     <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>

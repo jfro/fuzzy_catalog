@@ -38,35 +38,63 @@ defmodule FuzzyCatalogWeb.Layouts do
     <div class="navbar bg-base-100 shadow-lg">
       <div class="flex-1">
         <.link navigate={~p"/"} class="btn btn-ghost normal-case text-xl">
-          <.icon name="hero-book-open" class="h-6 w-6 mr-2" />
-          FuzzyCatalog
+          <.icon name="hero-book-open" class="h-6 w-6 mr-2" /> FuzzyCatalog
         </.link>
       </div>
       <div class="flex-none">
         <ul class="menu menu-horizontal px-1">
           <li>
             <.link navigate={~p"/"} class="btn btn-ghost">
-              <.icon name="hero-home" class="h-4 w-4 mr-1" />
-              Home
+              <.icon name="hero-home" class="h-4 w-4 mr-1" /> Home
             </.link>
           </li>
           <li>
             <.link navigate={~p"/books"} class="btn btn-ghost">
-              <.icon name="hero-book-open" class="h-4 w-4 mr-1" />
-              Books
+              <.icon name="hero-book-open" class="h-4 w-4 mr-1" /> Books
             </.link>
           </li>
           <li>
             <.link navigate={~p"/books/new"} class="btn btn-ghost">
-              <.icon name="hero-plus" class="h-4 w-4 mr-1" />
-              Add Book
+              <.icon name="hero-plus" class="h-4 w-4 mr-1" /> Add Book
             </.link>
           </li>
+          <%= if @current_scope do %>
+            <li>
+              <details>
+                <summary class="btn btn-ghost">
+                  <.icon name="hero-user-circle" class="h-4 w-4 mr-1" />
+                  {@current_scope.user.email}
+                </summary>
+                <ul class="p-2 bg-base-100 rounded-t-none z-50">
+                  <li>
+                    <.link href={~p"/users/settings"} class="btn btn-ghost btn-sm">
+                      <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" /> Account Settings
+                    </.link>
+                  </li>
+                  <li>
+                    <.link href={~p"/users/log-out"} method="delete" class="btn btn-ghost btn-sm">
+                      <.icon name="hero-arrow-right-on-rectangle" class="h-4 w-4 mr-1" /> Log out
+                    </.link>
+                  </li>
+                </ul>
+              </details>
+            </li>
+          <% else %>
+            <li>
+              <.link href={~p"/users/log-in"} class="btn btn-ghost">
+                <.icon name="hero-arrow-right-on-rectangle" class="h-4 w-4 mr-1" /> Log in
+              </.link>
+            </li>
+            <li>
+              <.link href={~p"/users/register"} class="btn btn-primary">
+                <.icon name="hero-user-plus" class="h-4 w-4 mr-1" /> Register
+              </.link>
+            </li>
+          <% end %>
           <li>
             <details>
               <summary class="btn btn-ghost">
-                <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" />
-                Settings
+                <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" /> Settings
               </summary>
               <ul class="p-2 bg-base-100 rounded-t-none z-50">
                 <li class="mb-2">

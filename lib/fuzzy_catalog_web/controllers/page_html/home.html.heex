@@ -1,18 +1,16 @@
-<Layouts.app flash={@flash}>
+<Layouts.app flash={@flash} current_scope={@current_scope}>
   <div class="text-center">
     <h1 class="text-4xl font-bold mb-4">Welcome to FuzzyCatalog</h1>
     <p class="text-xl text-base-content/70 mb-8">
       Your personal book catalog and ISBN lookup tool
     </p>
-    
+
     <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
       <.link navigate={~p"/books"} class="btn btn-primary btn-lg">
-        <.icon name="hero-book-open" class="h-5 w-5 mr-2" />
-        View My Books
+        <.icon name="hero-book-open" class="h-5 w-5 mr-2" /> View My Books
       </.link>
       <.link navigate={~p"/books/new"} class="btn btn-outline btn-lg">
-        <.icon name="hero-plus" class="h-5 w-5 mr-2" />
-        Add a Book
+        <.icon name="hero-plus" class="h-5 w-5 mr-2" /> Add a Book
       </.link>
     </div>
 
@@ -24,7 +22,7 @@
           <p class="text-sm">Scan ISBN barcodes with your camera for instant book lookup</p>
         </div>
       </div>
-      
+
       <div class="card bg-base-200">
         <div class="card-body text-center">
           <.icon name="hero-magnifying-glass" class="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -32,7 +30,7 @@
           <p class="text-sm">Search by ISBN, title, or UPC using Open Library data</p>
         </div>
       </div>
-      
+
       <div class="card bg-base-200">
         <div class="card-body text-center">
           <.icon name="hero-archive-box" class="h-12 w-12 mx-auto mb-4 text-primary" />
@@ -43,4 +41,3 @@
     </div>
   </div>
 </Layouts.app>
-
