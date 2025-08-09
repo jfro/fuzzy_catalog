@@ -1,0 +1,101 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {@collection.book.title}
+    <:subtitle>by {@collection.book.author}</:subtitle>
+    <:actions>
+      <.link href={~p"/collections/#{@collection}/edit"}>
+        <.button>Edit notes</.button>
+      </.link>
+    </:actions>
+  </.header>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="lg:col-span-1">
+      <div :if={@collection.book.cover_url} class="mb-6">
+        <img
+          src={@collection.book.cover_url}
+          alt={"Cover of #{@collection.book.title}"}
+          class="w-full max-w-sm mx-auto rounded-lg shadow-lg"
+        />
+      </div>
+    </div>
+
+    <div class="lg:col-span-2">
+      <div class="space-y-6">
+        <div>
+          <h3 class="text-lg font-semibold mb-2">Book Details</h3>
+          <dl class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm">
+            <div>
+              <dt class="font-medium text-gray-600">Author:</dt>
+              <dd>{@collection.book.author}</dd>
+            </div>
+
+            <div :if={@collection.book.publisher}>
+              <dt class="font-medium text-gray-600">Publisher:</dt>
+              <dd>{@collection.book.publisher}</dd>
+            </div>
+
+            <div :if={@collection.book.publication_date}>
+              <dt class="font-medium text-gray-600">Published:</dt>
+              <dd>{@collection.book.publication_date}</dd>
+            </div>
+
+            <div :if={@collection.book.pages}>
+              <dt class="font-medium text-gray-600">Pages:</dt>
+              <dd>{@collection.book.pages}</dd>
+            </div>
+
+            <div :if={@collection.book.genre}>
+              <dt class="font-medium text-gray-600">Genre:</dt>
+              <dd>{@collection.book.genre}</dd>
+            </div>
+
+            <div :if={@collection.book.series}>
+              <dt class="font-medium text-gray-600">Series:</dt>
+              <dd>
+                {@collection.book.series}
+                <span :if={@collection.book.series_number}>
+                  #{@collection.book.series_number}
+                </span>
+              </dd>
+            </div>
+
+            <div :if={@collection.book.isbn13}>
+              <dt class="font-medium text-gray-600">ISBN-13:</dt>
+              <dd>{@collection.book.isbn13}</dd>
+            </div>
+
+            <div :if={@collection.book.isbn10}>
+              <dt class="font-medium text-gray-600">ISBN-10:</dt>
+              <dd>{@collection.book.isbn10}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div :if={@collection.book.description}>
+          <h3 class="text-lg font-semibold mb-2">Description</h3>
+          <p class="text-gray-700 leading-relaxed">{@collection.book.description}</p>
+        </div>
+
+        <div>
+          <h3 class="text-lg font-semibold mb-2">Collection Info</h3>
+          <dl class="space-y-2 text-sm">
+            <div>
+              <dt class="font-medium text-gray-600">Added to collection:</dt>
+              <dd>{Calendar.strftime(@collection.added_at, "%B %d, %Y at %I:%M %p")}</dd>
+            </div>
+
+            <div :if={@collection.notes}>
+              <dt class="font-medium text-gray-600">My notes:</dt>
+              <dd class="mt-1 p-3 bg-gray-50 rounded-lg">{@collection.notes}</dd>
+            </div>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mt-4">
+    <.link navigate={~p"/collections"} class="btn btn-outline">Back to collection</.link>
+  </div>
+</Layouts.app>

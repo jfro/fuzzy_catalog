@@ -60,6 +60,13 @@ defmodule FuzzyCatalogWeb.Layouts do
           </li>
           <%= if @current_scope do %>
             <li>
+              <.link navigate={~p"/collections"} class="btn btn-ghost">
+                <.icon name="hero-heart" class="h-4 w-4 mr-1" /> My Collection
+              </.link>
+            </li>
+          <% end %>
+          <%= if @current_scope do %>
+            <li>
               <details>
                 <summary class="btn btn-ghost">
                   <.icon name="hero-user-circle" class="h-4 w-4 mr-1" />

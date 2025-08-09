@@ -3,6 +3,21 @@
     {@book.title}
     <:subtitle>by {@book.author}</:subtitle>
     <:actions>
+      <%= if assigns[:current_user] do %>
+        <%= if assigns[:book_in_collection] do %>
+          <.link
+            href={~p"/collections/books/#{@book.id}/remove"}
+            method="delete"
+            data-confirm="Remove this book from your collection?"
+          >
+            <.button class="bg-red-600 hover:bg-red-700">Remove from Collection</.button>
+          </.link>
+        <% else %>
+          <.link href={~p"/collections/books/#{@book.id}/add"} method="post">
+            <.button class="bg-green-600 hover:bg-green-700">Add to Collection</.button>
+          </.link>
+        <% end %>
+      <% end %>
       <.link href={~p"/books/#{@book}/edit"}>
         <.button>Edit book</.button>
       </.link>

@@ -212,7 +212,9 @@
                     <h4 class="font-semibold">{book.title}</h4>
                     <p class="text-sm text-base-content/70">by {book.author}</p>
                     <%= if book.publication_date do %>
-                      <p class="text-xs text-base-content/60">Published: {book.publication_date.year}</p>
+                      <p class="text-xs text-base-content/60">
+                        Published: {book.publication_date.year}
+                      </p>
                     <% end %>
                   </div>
                   <.form :let={_f} for={%{}} action={~p"/books/new"} method="get">

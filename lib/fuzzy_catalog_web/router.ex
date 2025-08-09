@@ -59,6 +59,9 @@ defmodule FuzzyCatalogWeb.Router do
 
     post "/books/lookup", BookController, :lookup
     resources "/books", BookController
+    resources "/collections", CollectionController
+    post "/collections/books/:book_id/add", CollectionController, :add_book
+    delete "/collections/books/:book_id/remove", CollectionController, :remove_book
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email

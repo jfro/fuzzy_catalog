@@ -4,6 +4,7 @@ defmodule FuzzyCatalogWeb.BookController do
   alias FuzzyCatalog.Catalog
   alias FuzzyCatalog.Catalog.Book
   alias FuzzyCatalog.Catalog.BookLookup
+  alias FuzzyCatalog.Collections
 
   def index(conn, _params) do
     books = Catalog.list_books()
@@ -12,7 +13,24 @@ defmodule FuzzyCatalogWeb.BookController do
 
   def show(conn, %{"id" => id}) do
     book = Catalog.get_book!(id)
-    render(conn, :show, book: book)
+
+    book_in_collection =
+      case conn.assigns[:current_scope] do
+        nil -> false
+        current_scope -> Collections.book_in_collection?(current_scope.user, book)
+      end
+
+    current_user =
+      case conn.assigns[:current_scope] do
+        nil -> nil
+        current_scope -> current_scope.user
+      end
+
+    render(conn, :show,
+      book: book,
+      book_in_collection: book_in_collection,
+      current_user: current_user
+    )
   end
 
   def new(conn, params) do

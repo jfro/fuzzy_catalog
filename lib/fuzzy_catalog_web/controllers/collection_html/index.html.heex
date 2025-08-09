@@ -1,0 +1,64 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    My Book Collection
+    <:actions>
+      <.link href={~p"/collections/new"}>
+        <.button>Add Book</.button>
+      </.link>
+    </:actions>
+  </.header>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div :for={collection <- @collections} class="bg-white rounded-lg shadow-md overflow-hidden">
+      <div :if={collection.book.cover_url} class="aspect-w-2 aspect-h-3">
+        <img
+          src={collection.book.cover_url}
+          alt={"Cover of #{collection.book.title}"}
+          class="w-full h-48 object-cover"
+        />
+      </div>
+      <div class="p-4">
+        <h3 class="font-bold text-lg mb-2">
+          <.link href={~p"/collections/#{collection}"} class="hover:text-blue-600">
+            {collection.book.title}
+          </.link>
+        </h3>
+        <p class="text-gray-600 mb-2">by {collection.book.author}</p>
+
+        <div :if={collection.book.series} class="text-sm text-gray-500 mb-2">
+          {collection.book.series}
+          <span :if={collection.book.series_number}>#{collection.book.series_number}</span>
+        </div>
+
+        <div class="text-sm text-gray-500 mb-3">
+          Added {Calendar.strftime(collection.added_at, "%B %d, %Y")}
+        </div>
+
+        <div :if={collection.notes} class="mb-3">
+          <p class="text-sm italic text-gray-700">{collection.notes}</p>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <.link href={~p"/collections/#{collection}/edit"}>
+            <.button class="btn-sm">Edit</.button>
+          </.link>
+
+          <.link
+            href={~p"/collections/#{collection}"}
+            method="delete"
+            data-confirm="Are you sure you want to remove this book from your collection?"
+          >
+            <.button class="btn-sm bg-red-600 hover:bg-red-700">Remove</.button>
+          </.link>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div :if={@collections == []} class="text-center py-12">
+    <div class="text-gray-500 text-xl mb-4">Your collection is empty</div>
+    <.link href={~p"/collections/new"}>
+      <.button>Add your first book</.button>
+    </.link>
+  </div>
+</Layouts.app>
