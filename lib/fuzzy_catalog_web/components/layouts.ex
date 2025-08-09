@@ -71,6 +71,14 @@ defmodule FuzzyCatalogWeb.Layouts do
                       <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" /> Account Settings
                     </.link>
                   </li>
+                  <li class="mb-2">
+                    <span class="text-xs text-base-content/60 px-3">Theme</span>
+                  </li>
+                  <li>
+                    <div class="px-2">
+                      <.theme_toggle />
+                    </div>
+                  </li>
                   <li>
                     <.link href={~p"/users/log-out"} method="delete" class="btn btn-ghost btn-sm">
                       <.icon name="hero-arrow-right-on-rectangle" class="h-4 w-4 mr-1" /> Log out
@@ -91,23 +99,6 @@ defmodule FuzzyCatalogWeb.Layouts do
               </.link>
             </li>
           <% end %>
-          <li>
-            <details>
-              <summary class="btn btn-ghost">
-                <.icon name="hero-cog-6-tooth" class="h-4 w-4 mr-1" /> Settings
-              </summary>
-              <ul class="p-2 bg-base-100 rounded-t-none z-50">
-                <li class="mb-2">
-                  <span class="text-xs text-base-content/60">Theme</span>
-                </li>
-                <li>
-                  <div class="px-2">
-                    <.theme_toggle />
-                  </div>
-                </li>
-              </ul>
-            </details>
-          </li>
         </ul>
       </div>
     </div>

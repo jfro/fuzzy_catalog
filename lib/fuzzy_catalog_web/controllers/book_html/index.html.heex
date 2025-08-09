@@ -8,26 +8,28 @@
     </:actions>
   </.header>
 
-  <.table id="books" rows={@books} row_click={&JS.navigate(~p"/books/#{&1}")}>
+  <.table id="books" rows={@books}>
     <:col :let={book} label="Cover">
-      <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) do %>
-        <img
-          src={cover_url}
-          alt={"Cover of #{book.title}"}
-          class="h-16 w-12 object-cover rounded shadow-sm"
-          onerror="this.style.display='none'"
-        />
-      <% else %>
-        <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
-          <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
-        </div>
-      <% end %>
+      <.link navigate={~p"/books/#{book}"} class="block">
+        <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) do %>
+          <img
+            src={cover_url}
+            alt={"Cover of #{book.title}"}
+            class="h-16 w-12 object-cover rounded shadow-sm"
+            onerror="this.style.display='none'"
+          />
+        <% else %>
+          <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
+            <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+          </div>
+        <% end %>
+      </.link>
     </:col>
     <:col :let={book} label="Title & Author">
-      <div>
+      <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
         <div class="font-semibold">{book.title}</div>
         <div class="text-sm text-base-content/70">{book.author}</div>
-      </div>
+      </.link>
     </:col>
     <:col :let={book} label="Identifiers">
       <div class="text-xs space-y-1">

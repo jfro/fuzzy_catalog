@@ -20,6 +20,9 @@
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
 import "phoenix_html";
 
+// Import JS module for navigation handling
+import { JS } from "phoenix";
+
 // Import barcode scanner (includes QuaggaJS)
 import "./barcode_scanner.js";
 // Establish Phoenix Socket and LiveView configuration.
