@@ -11,6 +11,12 @@ config :fuzzy_catalog,
   ecto_repos: [FuzzyCatalog.Repo],
   generators: [timestamp_type: :utc_datetime]
 
+# Book lookup provider configuration
+config :fuzzy_catalog, :book_lookup,
+  providers: [
+    FuzzyCatalog.Catalog.Providers.OpenLibraryProvider
+  ]
+
 # Configures the endpoint
 config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
   url: [host: "localhost"],

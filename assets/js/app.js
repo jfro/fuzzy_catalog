@@ -18,7 +18,10 @@
 // To load it, simply add a second `<link>` to your `root.html.heex` file.
 
 // Include phoenix_html to handle method=PUT/DELETE in forms and buttons.
-import "phoenix_html"
+import "phoenix_html";
+
+// Import barcode scanner (includes QuaggaJS)
+import "./barcode_scanner.js";
 // Establish Phoenix Socket and LiveView configuration.
 // import {Socket} from "phoenix"
 // import {LiveSocket} from "phoenix_live_view"
@@ -57,7 +60,7 @@ import "phoenix_html"
 //     // Enable server log streaming to client.
 //     // Disable with reloader.disableServerLogs()
 //     reloader.enableServerLogs()
-// 
+//
 //     // Open configured PLUG_EDITOR at file:line of the clicked element's HEEx component
 //     //
 //     //   * click with "c" key pressed to open at caller location
@@ -76,15 +79,14 @@ import "phoenix_html"
 //         reloader.openEditorAtDef(e.target)
 //       }
 //     }, true)
-// 
+//
 //     window.liveReloader = reloader
 //   })
 // }
 
-
 // Handle flash close
 document.querySelectorAll("[role=alert][data-flash]").forEach((el) => {
   el.addEventListener("click", () => {
-    el.setAttribute("hidden", "")
-  })
-})
+    el.setAttribute("hidden", "");
+  });
+});

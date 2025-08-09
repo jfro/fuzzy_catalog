@@ -25,7 +25,7 @@
           setTheme(localStorage.getItem("phx:theme") || "system");
         }
         window.addEventListener("storage", (e) => e.key === "phx:theme" && setTheme(e.newValue || "system"));
-        
+
         document.addEventListener("DOMContentLoaded", () => {
           document
             .querySelectorAll("button[data-phx-theme]")

@@ -86,3 +86,11 @@ config :phoenix_live_view,
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false
+
+# Book lookup providers for development
+# Uncomment to enable Google Books as fallback provider
+# config :fuzzy_catalog, :book_lookup,
+#   providers: [
+#     FuzzyCatalog.Catalog.Providers.OpenLibraryProvider,
+#     FuzzyCatalog.Catalog.Providers.GoogleBooksProvider
+#   ]
