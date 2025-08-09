@@ -9,7 +9,7 @@
   </.header>
 
   <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-    <div :for={collection <- @collections} class="bg-white rounded-lg shadow-md overflow-hidden">
+    <div :for={collection <- @collections} class="bg-base-100 rounded-lg shadow-md overflow-hidden">
       <div :if={collection.book.cover_url} class="aspect-w-2 aspect-h-3">
         <img
           src={collection.book.cover_url}
@@ -40,7 +40,7 @@
 
         <div class="flex justify-between items-center">
           <.link href={~p"/collections/#{collection}/edit"}>
-            <.button class="btn-sm">Edit</.button>
+            <.button class="btn-sm btn-outline">Edit</.button>
           </.link>
 
           <.link
@@ -48,7 +48,7 @@
             method="delete"
             data-confirm="Are you sure you want to remove this book from your collection?"
           >
-            <.button class="btn-sm bg-red-600 hover:bg-red-700">Remove</.button>
+            <.button class="btn-sm btn-error">Remove</.button>
           </.link>
         </div>
       </div>
