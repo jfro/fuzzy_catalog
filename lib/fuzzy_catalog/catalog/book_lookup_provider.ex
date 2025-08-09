@@ -46,10 +46,4 @@ defmodule FuzzyCatalog.Catalog.BookLookupProvider do
   Provider name for logging and identification.
   """
   @callback provider_name() :: String.t()
-
-  @doc """
-  Provider priority for ordering when multiple providers are available.
-  Lower numbers = higher priority.
-  """
-  @callback priority() :: integer()
 end

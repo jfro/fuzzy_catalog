@@ -77,9 +77,6 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
   @impl BookLookupProvider
   def provider_name, do: "OpenLibrary"
 
-  @impl BookLookupProvider
-  def priority, do: 1
-
   # Private functions
 
   defp make_request(url) do

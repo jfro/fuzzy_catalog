@@ -29,8 +29,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
       {:error, "Invalid ISBN format"}
   """
   def lookup_by_isbn(isbn) when is_binary(isbn) do
-    providers_by_priority = Enum.sort_by(get_providers(), & &1.priority())
-    try_providers_for_isbn(providers_by_priority, isbn)
+    try_providers_for_isbn(get_providers(), isbn)
   end
 
   @doc """
@@ -48,10 +47,12 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
       {:error, "Title cannot be empty"}
   """
   def lookup_by_title(title) when is_binary(title) do
-    providers = get_providers()
-    primary_provider = Enum.min_by(providers, & &1.priority())
-    
-    primary_provider.lookup_by_title(title)
+    case get_providers() do
+      [primary_provider | _] ->
+        primary_provider.lookup_by_title(title)
+      [] ->
+        {:error, "No providers configured"}
+    end
   end
 
   @doc """
@@ -122,14 +123,15 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   Get list of available providers with their information.
   """
   def providers do
-    Enum.map(get_providers(), fn provider ->
+    get_providers()
+    |> Enum.with_index(1)
+    |> Enum.map(fn {provider, index} ->
       %{
         name: provider.provider_name(),
-        priority: provider.priority(),
+        order: index,
         module: provider
       }
     end)
-    |> Enum.sort_by(& &1.priority)
   end
 
   # Private functions

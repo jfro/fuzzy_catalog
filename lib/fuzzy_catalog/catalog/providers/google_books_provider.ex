@@ -53,9 +53,6 @@ defmodule FuzzyCatalog.Catalog.Providers.GoogleBooksProvider do
   @impl BookLookupProvider
   def provider_name, do: "Google Books"
 
-  @impl BookLookupProvider
-  def priority, do: 2
-
   # Private functions
 
   defp make_request(url) do
