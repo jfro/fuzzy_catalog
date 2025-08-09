@@ -1,0 +1,157 @@
+<.header>
+  New Book
+  <:subtitle>Add a new book to your catalog or lookup from Open Library</:subtitle>
+</.header>
+
+<!-- Book Lookup Section -->
+<div class="card bg-base-200 mb-6">
+  <div class="card-body">
+    <h3 class="card-title">Lookup Book Information</h3>
+    <p class="text-sm text-base-content/70 mb-4">
+      Search for book details using ISBN, UPC, or title to auto-fill the form below.
+    </p>
+
+    <.form :let={lf} for={%{}} action={~p"/books/lookup"} method="post" class="space-y-3">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <.input
+            field={lf[:isbn]}
+            type="text"
+            label="ISBN (10 or 13 digits)"
+            placeholder="e.g., 0451526538"
+          />
+          <.button
+            type="submit"
+            name="lookup_type"
+            value="isbn"
+            class="btn btn-sm btn-primary mt-2 w-full"
+          >
+            Lookup by ISBN
+          </.button>
+        </div>
+
+        <div>
+          <.input
+            field={lf[:upc]}
+            type="text"
+            label="UPC Barcode"
+            placeholder="e.g., 123456789012"
+          />
+          <.button
+            type="submit"
+            name="lookup_type"
+            value="upc"
+            class="btn btn-sm btn-primary mt-2 w-full"
+          >
+            Lookup by UPC
+          </.button>
+        </div>
+
+        <div>
+          <.input
+            field={lf[:title]}
+            type="text"
+            label="Book Title"
+            placeholder="e.g., Lord of the Rings"
+          />
+          <.button
+            type="submit"
+            name="lookup_type"
+            value="title"
+            class="btn btn-sm btn-primary mt-2 w-full"
+          >
+            Lookup by Title
+          </.button>
+        </div>
+      </div>
+    </.form>
+  </div>
+</div>
+
+<!-- Lookup Results Display -->
+<%= if assigns[:lookup_results] do %>
+  <div class="card bg-base-100 border border-primary mb-6">
+    <div class="card-body">
+      <h3 class="card-title text-primary">Lookup Results</h3>
+      <%= if is_list(@lookup_results) do %>
+        <div class="space-y-2">
+          <%= for {book, index} <- Enum.with_index(@lookup_results) do %>
+            <div class="border rounded-lg p-3 hover:bg-base-50">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h4 class="font-semibold">{book.title}</h4>
+                  <p class="text-sm text-base-content/70">by {book.author}</p>
+                  <%= if book.publish_year do %>
+                    <p class="text-xs text-base-content/60">Published: {book.publish_year}</p>
+                  <% end %>
+                </div>
+                <.form :let={_f} for={%{}} action={~p"/books/new"} method="get">
+                  <input type="hidden" name="title" value={book.title} />
+                  <input type="hidden" name="author" value={book.author} />
+                  <input type="hidden" name="isbn10" value={book.isbn10 || ""} />
+                  <input type="hidden" name="isbn13" value={book.isbn13 || ""} />
+                  <input type="hidden" name="cover_url" value={book.cover_url || ""} />
+                  <.button type="submit" class="btn btn-xs btn-outline">Use This Book</.button>
+                </.form>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="border rounded-lg p-3">
+          <h4 class="font-semibold">{@lookup_results.title}</h4>
+          <p class="text-sm text-base-content/70">by {@lookup_results.author}</p>
+          <%= if @lookup_results.publish_year do %>
+            <p class="text-xs text-base-content/60">Published: {@lookup_results.publish_year}</p>
+          <% end %>
+          <.form :let={_f} for={%{}} action={~p"/books/new"} method="get" class="mt-2">
+            <input type="hidden" name="title" value={@lookup_results.title} />
+            <input type="hidden" name="author" value={@lookup_results.author} />
+            <input type="hidden" name="isbn10" value={@lookup_results.isbn10 || ""} />
+            <input type="hidden" name="isbn13" value={@lookup_results.isbn13 || ""} />
+            <input type="hidden" name="cover_url" value={@lookup_results.cover_url || ""} />
+            <.button type="submit" class="btn btn-sm btn-primary">Use This Book</.button>
+          </.form>
+        </div>
+      <% end %>
+    </div>
+  </div>
+<% end %>
+
+<!-- Lookup Error Display -->
+<%= if assigns[:lookup_error] do %>
+  <div class="alert alert-warning mb-6">
+    <p>{@lookup_error}</p>
+  </div>
+<% end %>
+
+<.form :let={f} for={@changeset} action={~p"/books"} id="book-form">
+  <%= if @changeset.action do %>
+    <div class="alert alert-error mb-4">
+      <p>Oops, something went wrong! Please check the errors below.</p>
+    </div>
+  <% end %>
+
+  <div class="space-y-4">
+    <.input field={f[:title]} type="text" label="Title" required />
+    <.input field={f[:author]} type="text" label="Author" required />
+    <.input field={f[:upc]} type="text" label="UPC" />
+    <.input field={f[:isbn10]} type="text" label="ISBN-10" />
+    <.input field={f[:isbn13]} type="text" label="ISBN-13" />
+    <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
+    <.input
+      field={f[:cover_url]}
+      type="url"
+      label="Cover Image URL (optional)"
+      placeholder="https://example.com/cover.jpg"
+    />
+  </div>
+
+  <div class="mt-6">
+    <.button type="submit">Save Book</.button>
+  </div>
+</.form>
+
+<div class="mt-4">
+  <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+</div>

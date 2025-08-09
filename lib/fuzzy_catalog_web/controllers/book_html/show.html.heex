@@ -1,0 +1,51 @@
+<.header>
+  {@book.title}
+  <:subtitle>by {@book.author}</:subtitle>
+  <:actions>
+    <.link href={~p"/books/#{@book}/edit"}>
+      <.button>Edit book</.button>
+    </.link>
+  </:actions>
+</.header>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+  <!-- Book Cover -->
+  <div class="md:col-span-1">
+    <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(@book.isbn13 || @book.isbn10, :medium) do %>
+      <img
+        src={cover_url}
+        alt={"Cover of #{@book.title}"}
+        class="w-full max-w-sm mx-auto rounded-lg shadow-md"
+        onerror="this.parentNode.innerHTML='<div class=&quot;w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center&quot;><div class=&quot;text-center&quot;><svg class=&quot;h-12 w-12 text-base-content/50 mx-auto mb-2&quot; fill=&quot;none&quot; stroke=&quot;currentColor&quot; viewBox=&quot;0 0 24 24&quot;><path stroke-linecap=&quot;round&quot; stroke-linejoin=&quot;round&quot; stroke-width=&quot;2&quot; d=&quot;M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253&quot;></path></svg><div class=&quot;text-sm text-base-content/60&quot;>No cover available</div></div></div>'"
+      />
+    <% else %>
+      <div class="w-full max-w-sm mx-auto aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center">
+        <div class="text-center">
+          <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50 mx-auto mb-2" />
+          <div class="text-sm text-base-content/60">No cover available</div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  
+<!-- Book Details -->
+  <div class="md:col-span-3">
+    <.list>
+      <:item title="Title">{@book.title}</:item>
+      <:item title="Author">{@book.author}</:item>
+      <:item :if={@book.upc} title="UPC">{@book.upc}</:item>
+      <:item :if={@book.isbn10} title="ISBN-10">{@book.isbn10}</:item>
+      <:item :if={@book.isbn13} title="ISBN-13">{@book.isbn13}</:item>
+      <:item :if={@book.amazon_asin} title="Amazon ASIN">{@book.amazon_asin}</:item>
+      <:item :if={@book.cover_url} title="Cover URL">
+        <a href={@book.cover_url} target="_blank" class="link link-primary text-sm">
+          {@book.cover_url}
+        </a>
+      </:item>
+    </.list>
+  </div>
+</div>
+
+<div class="mt-4">
+  <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+</div>
