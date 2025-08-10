@@ -7,8 +7,11 @@
         <%= if assigns[:book_in_collection] do %>
           <div class="flex flex-wrap gap-2">
             <div class="dropdown dropdown-end">
-              <div tabindex="0" role="button" class="btn btn-primary">Add Media Type</div>
-              <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+              <div tabindex="0" role="button" class="btn btn-primary">Add Book to Collection</div>
+              <ul
+                tabindex="0"
+                class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
+              >
                 <%= for media_type <- ["hardcover", "paperback", "audiobook", "ebook"] do %>
                   <li>
                     <.link
@@ -21,7 +24,7 @@
                 <% end %>
               </ul>
             </div>
-            
+
             <.link
               href={~p"/collections/books/#{@book.id}/remove"}
               method="delete"
@@ -33,7 +36,10 @@
         <% else %>
           <div class="dropdown dropdown-end">
             <div tabindex="0" role="button" class="btn btn-primary">Add to Collection</div>
-            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+            <ul
+              tabindex="0"
+              class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
+            >
               <%= for {label, media_type} <- [{"Unspecified", "unspecified"}, {"Hardcover", "hardcover"}, {"Paperback", "paperback"}, {"Audiobook", "audiobook"}, {"eBook", "ebook"}] do %>
                 <li>
                   <.link
