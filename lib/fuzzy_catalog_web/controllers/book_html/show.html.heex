@@ -5,17 +5,47 @@
     <:actions>
       <%= if assigns[:current_user] do %>
         <%= if assigns[:book_in_collection] do %>
-          <.link
-            href={~p"/collections/books/#{@book.id}/remove"}
-            method="delete"
-            data-confirm="Remove this book from your collection?"
-          >
-            <.button class="btn btn-error">Remove from Collection</.button>
-          </.link>
+          <div class="flex flex-wrap gap-2">
+            <div class="dropdown dropdown-end">
+              <div tabindex="0" role="button" class="btn btn-primary">Add Media Type</div>
+              <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+                <%= for media_type <- ["hardcover", "paperback", "audiobook", "ebook"] do %>
+                  <li>
+                    <.link
+                      href={~p"/collections/books/#{@book.id}/add?media_type=#{media_type}"}
+                      method="post"
+                    >
+                      {String.capitalize(media_type)}
+                    </.link>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+            
+            <.link
+              href={~p"/collections/books/#{@book.id}/remove"}
+              method="delete"
+              data-confirm="Remove all media types from your collection?"
+            >
+              <.button class="btn btn-error">Remove All</.button>
+            </.link>
+          </div>
         <% else %>
-          <.link href={~p"/collections/books/#{@book.id}/add"} method="post">
-            <.button>Add to Collection</.button>
-          </.link>
+          <div class="dropdown dropdown-end">
+            <div tabindex="0" role="button" class="btn btn-primary">Add to Collection</div>
+            <ul tabindex="0" class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow">
+              <%= for {label, media_type} <- [{"Unspecified", "unspecified"}, {"Hardcover", "hardcover"}, {"Paperback", "paperback"}, {"Audiobook", "audiobook"}, {"eBook", "ebook"}] do %>
+                <li>
+                  <.link
+                    href={~p"/collections/books/#{@book.id}/add?media_type=#{media_type}"}
+                    method="post"
+                  >
+                    {label}
+                  </.link>
+                </li>
+              <% end %>
+            </ul>
+          </div>
         <% end %>
       <% end %>
       <.link href={~p"/books/#{@book}/edit"}>

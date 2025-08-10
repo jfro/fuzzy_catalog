@@ -6,7 +6,10 @@
       "Bash(mix ecto.migrate:*)",
       "Bash(mix phx.server:*)",
       "Bash(mix compile)",
-      "Bash(mix precommit:*)"
+      "Bash(mix precommit:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:openlibrary.org)",
+      "Bash(mix test)"
     ],
     "deny": []
   }

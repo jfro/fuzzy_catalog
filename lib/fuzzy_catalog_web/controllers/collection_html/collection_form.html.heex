@@ -30,6 +30,22 @@
       </div>
     </div>
 
+    <div class="mb-4">
+      <.input
+        field={f[:media_type]}
+        type="select"
+        label="Media Type"
+        options={[
+          {"Unspecified", "unspecified"},
+          {"Hardcover", "hardcover"},
+          {"Paperback", "paperback"},
+          {"Audiobook", "audiobook"},
+          {"eBook", "ebook"}
+        ]}
+        value="unspecified"
+      />
+    </div>
+
     <.input
       field={f[:notes]}
       type="textarea"
@@ -80,6 +96,22 @@
           <.input field={f[:description]} type="textarea" label="Description" rows="3" />
         </div>
       </details>
+
+      <div class="mb-4">
+        <.input
+          field={f[:media_type]}
+          type="select"
+          label="Media Type"
+          options={[
+            {"Unspecified", "unspecified"},
+            {"Hardcover", "hardcover"},
+            {"Paperback", "paperback"},
+            {"Audiobook", "audiobook"},
+            {"eBook", "ebook"}
+          ]}
+          value="unspecified"
+        />
+      </div>
 
       <.input
         field={f[:notes]}
