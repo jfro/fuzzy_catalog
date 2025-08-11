@@ -55,6 +55,12 @@ if config_env() == :prod do
 
   config :fuzzy_catalog, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Audiobookshelf configuration
+  config :fuzzy_catalog, :audiobookshelf,
+    url: System.get_env("AUDIOBOOKSHELF_URL"),
+    api_key: System.get_env("AUDIOBOOKSHELF_API_KEY"),
+    libraries: System.get_env("AUDIOBOOKSHELF_LIBRARIES")
+
   config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

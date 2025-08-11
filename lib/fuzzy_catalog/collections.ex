@@ -94,7 +94,10 @@ defmodule FuzzyCatalog.Collections do
   """
   def get_user_book_item(%User{id: user_id}, %Book{id: book_id}, media_type) do
     CollectionItem
-    |> where([ci], ci.user_id == ^user_id and ci.book_id == ^book_id and ci.media_type == ^media_type)
+    |> where(
+      [ci],
+      ci.user_id == ^user_id and ci.book_id == ^book_id and ci.media_type == ^media_type
+    )
     |> preload(:book)
     |> Repo.one()
   end
@@ -131,7 +134,10 @@ defmodule FuzzyCatalog.Collections do
   """
   def book_media_type_in_collection?(%User{id: user_id}, %Book{id: book_id}, media_type) do
     CollectionItem
-    |> where([ci], ci.user_id == ^user_id and ci.book_id == ^book_id and ci.media_type == ^media_type)
+    |> where(
+      [ci],
+      ci.user_id == ^user_id and ci.book_id == ^book_id and ci.media_type == ^media_type
+    )
     |> Repo.exists?()
   end
 
@@ -152,7 +158,7 @@ defmodule FuzzyCatalog.Collections do
   """
   def add_to_collection(%User{} = user, %Book{} = book, media_type \\ "unspecified", attrs \\ %{}) do
     base_attrs = %{user_id: user.id, book_id: book.id, media_type: media_type}
-    
+
     %CollectionItem{}
     |> CollectionItem.changeset(Map.merge(attrs, base_attrs))
     |> Repo.insert()

@@ -27,9 +27,10 @@ defmodule FuzzyCatalogWeb.CollectionController do
 
     # Handle book creation/lookup
     media_type = Map.get(collection_params, "media_type", "unspecified")
-    
+
     with {:ok, book} <- find_or_create_book(collection_params),
-         {:ok, _collection} <- Collections.add_to_collection(user, book, media_type, collection_params) do
+         {:ok, _collection} <-
+           Collections.add_to_collection(user, book, media_type, collection_params) do
       conn
       |> put_flash(:info, "Book added to your collection successfully.")
       |> redirect(to: ~p"/collections")
@@ -120,7 +121,7 @@ defmodule FuzzyCatalogWeb.CollectionController do
     book = Catalog.get_book!(book_id)
 
     media_type = Map.get(params, "media_type", "unspecified")
-    
+
     case Collections.add_to_collection(user, book, media_type) do
       {:ok, _collection} ->
         conn
@@ -152,7 +153,7 @@ defmodule FuzzyCatalogWeb.CollectionController do
             |> put_flash(:error, "This book is not in your collection.")
             |> redirect(to: ~p"/books/#{book}")
         end
-        
+
       media_type ->
         # Remove specific media type
         case Collections.remove_from_collection(user, book, media_type) do

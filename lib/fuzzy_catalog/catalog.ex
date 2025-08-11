@@ -194,4 +194,40 @@ defmodule FuzzyCatalog.Catalog do
       _ -> nil
     end
   end
+
+  @doc """
+  Gets a book by ISBN (either ISBN-10 or ISBN-13).
+
+  ## Examples
+
+      iex> get_book_by_isbn("9781234567890")
+      %Book{}
+
+      iex> get_book_by_isbn("nonexistent")
+      nil
+
+  """
+  def get_book_by_isbn(isbn) when is_binary(isbn) do
+    from(b in Book)
+    |> where([b], b.isbn13 == ^isbn or b.isbn10 == ^isbn)
+    |> Repo.one()
+  end
+
+  @doc """
+  Finds a book by title and author combination.
+
+  ## Examples
+
+      iex> find_book_by_title_and_author("The Great Book", "Famous Author")
+      %Book{}
+
+      iex> find_book_by_title_and_author("Nonexistent", "No Author")
+      nil
+
+  """
+  def find_book_by_title_and_author(title, author) when is_binary(title) and is_binary(author) do
+    from(b in Book)
+    |> where([b], b.title == ^title and b.author == ^author)
+    |> Repo.one()
+  end
 end

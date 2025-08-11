@@ -17,7 +17,7 @@ defmodule FuzzyCatalog.Collections.CollectionItem do
 
   @doc """
   Returns the list of supported media types.
-  
+
   Future enhancement: Could be populated from OpenLibrary API format hints.
   """
   def media_types, do: @media_types

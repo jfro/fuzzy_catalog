@@ -94,3 +94,9 @@ config :swoosh, :api_client, false
 #     FuzzyCatalog.Catalog.Providers.OpenLibraryProvider,
 #     FuzzyCatalog.Catalog.Providers.GoogleBooksProvider
 #   ]
+
+# Audiobookshelf configuration for development
+config :fuzzy_catalog, :audiobookshelf,
+  url: System.get_env("AUDIOBOOKSHELF_URL"),
+  api_key: System.get_env("AUDIOBOOKSHELF_API_KEY"),
+  libraries: System.get_env("AUDIOBOOKSHELF_LIBRARIES")
