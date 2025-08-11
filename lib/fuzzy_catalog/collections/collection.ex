@@ -6,7 +6,6 @@ defmodule FuzzyCatalog.Collections.Collection do
     field :added_at, :utc_datetime
     field :notes, :string
 
-    belongs_to :user, FuzzyCatalog.Accounts.User
     belongs_to :book, FuzzyCatalog.Catalog.Book
 
     timestamps()
@@ -15,10 +14,9 @@ defmodule FuzzyCatalog.Collections.Collection do
   @doc false
   def changeset(collection, attrs) do
     collection
-    |> cast(attrs, [:user_id, :book_id, :added_at, :notes])
-    |> validate_required([:user_id, :book_id])
-    |> foreign_key_constraint(:user_id)
+    |> cast(attrs, [:book_id, :added_at, :notes])
+    |> validate_required([:book_id])
     |> foreign_key_constraint(:book_id)
-    |> unique_constraint([:user_id, :book_id])
+    |> unique_constraint([:book_id])
   end
 end

@@ -35,3 +35,4 @@ fuzzy_catalog-*.tar
 npm-debug.log
 /assets/node_modules/
 
+mise.local.toml

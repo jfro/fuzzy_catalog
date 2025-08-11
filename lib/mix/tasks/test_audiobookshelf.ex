@@ -28,20 +28,21 @@ defmodule Mix.Tasks.TestAudiobookshelf do
 
     IO.puts("Testing Audiobookshelf API connection...")
     IO.puts("Provider: #{AudiobookshelfProvider.provider_name()}")
-    
+
     # Check if provider is available (configured)
     if AudiobookshelfProvider.available?() do
       IO.puts("✓ Configuration found")
-      
+
       # Test fetching books
       IO.puts("\nFetching books from Audiobookshelf...")
-      
+
       case AudiobookshelfProvider.fetch_books() do
         {:ok, books} ->
           IO.puts("✓ Successfully fetched #{length(books)} books")
-          
+
           if length(books) > 0 do
             IO.puts("\nFirst few books:")
+
             books
             |> Enum.take(5)
             |> Enum.with_index(1)
@@ -54,7 +55,7 @@ defmodule Mix.Tasks.TestAudiobookshelf do
               if book.publisher, do: IO.puts("     Publisher: #{book.publisher}")
               IO.puts("")
             end)
-            
+
             if length(books) > 5 do
               IO.puts("  ... and #{length(books) - 5} more books")
             end

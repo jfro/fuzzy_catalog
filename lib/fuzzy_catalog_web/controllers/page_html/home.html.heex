@@ -2,16 +2,18 @@
   <div class="text-center">
     <h1 class="text-4xl font-bold mb-4">Welcome to FuzzyCatalog</h1>
     <p class="text-xl text-base-content/70 mb-8">
-      Your personal book catalog and ISBN lookup tool
+      Your shared book library and ISBN lookup tool
     </p>
 
     <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
       <.link navigate={~p"/books"} class="btn btn-primary btn-lg">
-        <.icon name="hero-book-open" class="h-5 w-5 mr-2" /> View My Books
+        <.icon name="hero-book-open" class="h-5 w-5 mr-2" /> Browse Library
       </.link>
-      <.link navigate={~p"/books/new"} class="btn btn-outline btn-lg">
-        <.icon name="hero-plus" class="h-5 w-5 mr-2" /> Add a Book
-      </.link>
+      <%= if @current_scope do %>
+        <.link navigate={~p"/books/new"} class="btn btn-outline btn-lg">
+          <.icon name="hero-plus" class="h-5 w-5 mr-2" /> Add Book
+        </.link>
+      <% end %>
     </div>
 
     <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -34,8 +36,10 @@
       <div class="card bg-base-200">
         <div class="card-body text-center">
           <.icon name="hero-archive-box" class="h-12 w-12 mx-auto mb-4 text-primary" />
-          <h3 class="card-title justify-center">Personal Catalog</h3>
-          <p class="text-sm">Organize and manage your personal book collection</p>
+          <h3 class="card-title justify-center">Media Types</h3>
+          <p class="text-sm">
+            Track books by different media types (hardcover, paperback, ebook, audiobook)
+          </p>
         </div>
       </div>
     </div>

@@ -85,8 +85,12 @@ defmodule FuzzyCatalogWeb.UserSessionControllerTest do
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/"
 
-      # Now do a logged in request and assert on the menu
+      # Now do a logged in request and assert on the menu - redirected to books page
       conn = get(conn, ~p"/")
+      assert redirected_to(conn) == ~p"/books"
+
+      # Follow redirect to books page and check menu
+      conn = get(conn, ~p"/books")
       response = html_response(conn, 200)
       assert response =~ user.email
       assert response =~ ~p"/users/settings"
@@ -160,8 +164,12 @@ defmodule FuzzyCatalogWeb.UserSessionControllerTest do
       assert get_session(conn, :user_token)
       assert redirected_to(conn) == ~p"/"
 
-      # Now do a logged in request and assert on the menu
+      # Now do a logged in request and assert on the menu - redirected to books page
       conn = get(conn, ~p"/")
+      assert redirected_to(conn) == ~p"/books"
+
+      # Follow redirect to books page and check menu
+      conn = get(conn, ~p"/books")
       response = html_response(conn, 200)
       assert response =~ user.email
       assert response =~ ~p"/users/settings"
@@ -184,8 +192,12 @@ defmodule FuzzyCatalogWeb.UserSessionControllerTest do
 
       assert Accounts.get_user!(user.id).confirmed_at
 
-      # Now do a logged in request and assert on the menu
+      # Now do a logged in request and assert on the menu - redirected to books page
       conn = get(conn, ~p"/")
+      assert redirected_to(conn) == ~p"/books"
+
+      # Follow redirect to books page and check menu
+      conn = get(conn, ~p"/books")
       response = html_response(conn, 200)
       assert response =~ user.email
       assert response =~ ~p"/users/settings"

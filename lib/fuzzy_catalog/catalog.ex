@@ -34,7 +34,7 @@ defmodule FuzzyCatalog.Catalog do
   def get_book!(id), do: Repo.get!(Book, id)
 
   @doc """
-  Creates a book.
+  Creates a book and automatically adds it to the library with an initial media type.
 
   ## Examples
 
@@ -46,9 +46,22 @@ defmodule FuzzyCatalog.Catalog do
 
   """
   def create_book(attrs \\ %{}) do
-    %Book{}
-    |> Book.changeset(attrs)
-    |> Repo.insert()
+    media_type = Map.get(attrs, "media_type", "unspecified")
+
+    case %Book{}
+         |> Book.changeset(attrs)
+         |> Repo.insert() do
+      {:ok, book} ->
+        # Automatically add the book to the collection with the specified media type
+        case FuzzyCatalog.Collections.add_to_collection(book, media_type) do
+          {:ok, _collection_item} -> {:ok, book}
+          # Book created successfully, collection item failed
+          {:error, _changeset} -> {:ok, book}
+        end
+
+      {:error, changeset} ->
+        {:error, changeset}
+    end
   end
 
   @doc """

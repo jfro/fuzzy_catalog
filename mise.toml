@@ -1,3 +1,4 @@
-[env]
-OIDC_CLIENT_ID = "fa58022c-a7a0-4e2c-9d6a-eee9d063c0b6"
-OIDC_CLIENT_SECRET = "647ybRIjQod3qrlyUkngUXglFfTmLwDU"
+[tools]
+erlang = "27"
+node = "22"
+elixir = "1.18"

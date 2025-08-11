@@ -1,7 +1,7 @@
 <Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>
-    New Book
-    <:subtitle>Add a new book to your catalog or lookup from Open Library</:subtitle>
+    Add Book to Library
+    <:subtitle>Add a new book to the library or lookup from Open Library</:subtitle>
   </.header>
   
 <!-- Book Lookup Section with Tabs -->
@@ -269,6 +269,21 @@
     <div class="space-y-4">
       <.input field={f[:title]} type="text" label="Title" required />
       <.input field={f[:author]} type="text" label="Author" required />
+
+      <.input
+        field={f[:media_type]}
+        type="select"
+        label="Initial Media Type"
+        options={[
+          {"Unspecified", "unspecified"},
+          {"Hardcover", "hardcover"},
+          {"Paperback", "paperback"},
+          {"Audiobook", "audiobook"},
+          {"eBook", "ebook"}
+        ]}
+        value="unspecified"
+      />
+
       <.input field={f[:upc]} type="text" label="UPC" />
       <.input field={f[:isbn10]} type="text" label="ISBN-10" />
       <.input field={f[:isbn13]} type="text" label="ISBN-13" />
@@ -282,12 +297,12 @@
     </div>
 
     <div class="mt-6">
-      <.button type="submit">Save Book</.button>
+      <.button type="submit">Add to Library</.button>
     </div>
   </.form>
 
   <div class="mt-4">
-    <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+    <.link navigate={~p"/books"} class="btn btn-outline">Back to library</.link>
   </div>
 </Layouts.app>
 

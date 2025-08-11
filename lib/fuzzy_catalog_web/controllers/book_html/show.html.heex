@@ -3,57 +3,6 @@
     {@book.title}
     <:subtitle>by {@book.author}</:subtitle>
     <:actions>
-      <%= if assigns[:current_user] do %>
-        <%= if assigns[:book_in_collection] do %>
-          <div class="flex flex-wrap gap-2">
-            <div class="dropdown dropdown-end">
-              <div tabindex="0" role="button" class="btn btn-primary">Add Book to Collection</div>
-              <ul
-                tabindex="0"
-                class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
-              >
-                <%= for media_type <- ["hardcover", "paperback", "audiobook", "ebook"] do %>
-                  <li>
-                    <.link
-                      href={~p"/collections/books/#{@book.id}/add?media_type=#{media_type}"}
-                      method="post"
-                    >
-                      {String.capitalize(media_type)}
-                    </.link>
-                  </li>
-                <% end %>
-              </ul>
-            </div>
-
-            <.link
-              href={~p"/collections/books/#{@book.id}/remove"}
-              method="delete"
-              data-confirm="Remove all media types from your collection?"
-            >
-              <.button class="btn btn-error">Remove All</.button>
-            </.link>
-          </div>
-        <% else %>
-          <div class="dropdown dropdown-end">
-            <div tabindex="0" role="button" class="btn btn-primary">Add to Collection</div>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
-            >
-              <%= for {label, media_type} <- [{"Unspecified", "unspecified"}, {"Hardcover", "hardcover"}, {"Paperback", "paperback"}, {"Audiobook", "audiobook"}, {"eBook", "ebook"}] do %>
-                <li>
-                  <.link
-                    href={~p"/collections/books/#{@book.id}/add?media_type=#{media_type}"}
-                    method="post"
-                  >
-                    {label}
-                  </.link>
-                </li>
-              <% end %>
-            </ul>
-          </div>
-        <% end %>
-      <% end %>
       <.link href={~p"/books/#{@book}/edit"}>
         <.button>Edit book</.button>
       </.link>
@@ -81,24 +30,87 @@
     </div>
     
 <!-- Book Details -->
-    <div class="md:col-span-3">
-      <.list>
-        <:item title="Title">{@book.title}</:item>
-        <:item title="Author">{@book.author}</:item>
-        <:item :if={@book.upc} title="UPC">{@book.upc}</:item>
-        <:item :if={@book.isbn10} title="ISBN-10">{@book.isbn10}</:item>
-        <:item :if={@book.isbn13} title="ISBN-13">{@book.isbn13}</:item>
-        <:item :if={@book.amazon_asin} title="Amazon ASIN">{@book.amazon_asin}</:item>
-        <:item :if={@book.cover_url} title="Cover URL">
-          <a href={@book.cover_url} target="_blank" class="link link-primary text-sm">
-            {@book.cover_url}
-          </a>
-        </:item>
-      </.list>
+    <div class="md:col-span-3 space-y-6">
+      <!-- Media Types Section -->
+      <div class="bg-base-100 rounded-lg p-6 shadow-sm border">
+        <h3 class="text-lg font-semibold mb-4">Media Types in Library</h3>
+
+        <div class="flex flex-wrap gap-2 mb-4">
+          <div :for={media_type <- @media_types} class="flex items-center group">
+            <div class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 capitalize">
+              {if media_type == "unspecified", do: "Unspecified", else: media_type}
+            </div>
+            <%= if @current_user do %>
+              <.link
+                href={~p"/books/#{@book.id}/remove_media_type?media_type=#{media_type}"}
+                method="delete"
+                data-confirm={"Remove #{media_type} from library?"}
+                class="ml-1 text-red-500 hover:text-red-700 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <.icon name="hero-x-mark" class="h-4 w-4" />
+              </.link>
+            <% end %>
+          </div>
+        </div>
+
+        <%= if @current_user do %>
+          <div class="border-t pt-4">
+            <h4 class="text-sm font-medium text-gray-700 mb-2">Add Media Type</h4>
+            <div class="flex flex-wrap gap-2">
+              <%= for {label, media_type} <- [{"Unspecified", "unspecified"}, {"Hardcover", "hardcover"}, {"Paperback", "paperback"}, {"Audiobook", "audiobook"}, {"eBook", "ebook"}] do %>
+                <%= unless media_type in @media_types do %>
+                  <.link
+                    href={~p"/books/#{@book.id}/add_media_type?media_type=#{media_type}"}
+                    method="post"
+                    class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                  >
+                    + {label}
+                  </.link>
+                <% end %>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+<!-- Book Information -->
+      <div class="bg-base-100 rounded-lg p-6 shadow-sm border">
+        <h3 class="text-lg font-semibold mb-4">Book Information</h3>
+        <.list>
+          <:item title="Title">{@book.title}</:item>
+          <:item title="Author">{@book.author}</:item>
+          <:item :if={@book.subtitle} title="Subtitle">{@book.subtitle}</:item>
+          <:item :if={@book.series} title="Series">
+            {@book.series}
+            <span :if={@book.series_number}>#{@book.series_number}</span>
+          </:item>
+          <:item :if={@book.publisher} title="Publisher">{@book.publisher}</:item>
+          <:item :if={@book.publication_date} title="Publication Date">
+            {@book.publication_date}
+          </:item>
+          <:item :if={@book.pages} title="Pages">{@book.pages}</:item>
+          <:item :if={@book.genre} title="Genre">{@book.genre}</:item>
+          <:item :if={@book.isbn13} title="ISBN-13">{@book.isbn13}</:item>
+          <:item :if={@book.isbn10} title="ISBN-10">{@book.isbn10}</:item>
+          <:item :if={@book.upc} title="UPC">{@book.upc}</:item>
+          <:item :if={@book.amazon_asin} title="Amazon ASIN">{@book.amazon_asin}</:item>
+          <:item :if={@book.cover_url} title="Cover URL">
+            <a href={@book.cover_url} target="_blank" class="link link-primary text-sm">
+              {@book.cover_url}
+            </a>
+          </:item>
+        </.list>
+      </div>
+      
+<!-- Description -->
+      <div :if={@book.description} class="bg-base-100 rounded-lg p-6 shadow-sm border">
+        <h3 class="text-lg font-semibold mb-4">Description</h3>
+        <p class="text-gray-700 leading-relaxed">{@book.description}</p>
+      </div>
     </div>
   </div>
 
-  <div class="mt-4">
-    <.link navigate={~p"/books"} class="btn btn-outline">Back to books</.link>
+  <div class="mt-6">
+    <.link navigate={~p"/books"} class="btn btn-outline">Back to library</.link>
   </div>
 </Layouts.app>

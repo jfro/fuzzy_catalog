@@ -1,9 +1,10 @@
 <Layouts.app flash={@flash} current_scope={@current_scope}>
   <.header>
-    Books
+    Library
+    <:subtitle>Books and media types in your library</:subtitle>
     <:actions>
       <.link href={~p"/books/new"}>
-        <.button>New Book</.button>
+        <.button>Add Book</.button>
       </.link>
     </:actions>
   </.header>
@@ -31,19 +32,23 @@
         <div class="text-sm text-base-content/70">{book.author}</div>
       </.link>
     </:col>
-    <:col :let={book} label="Identifiers">
+    <:col :let={book} label="Media Types">
+      <div class="flex flex-wrap gap-1">
+        <div
+          :for={media_type <- book.media_types || []}
+          class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize"
+        >
+          {if media_type == "unspecified", do: "Unspecified", else: media_type}
+        </div>
+      </div>
+    </:col>
+    <:col :let={book} label="Details">
       <div class="text-xs space-y-1">
         <%= if book.isbn13 do %>
-          <div><span class="font-mono">ISBN-13:</span> {book.isbn13}</div>
+          <div><span class="font-mono">ISBN:</span> {book.isbn13}</div>
         <% end %>
-        <%= if book.isbn10 do %>
-          <div><span class="font-mono">ISBN-10:</span> {book.isbn10}</div>
-        <% end %>
-        <%= if book.upc do %>
-          <div><span class="font-mono">UPC:</span> {book.upc}</div>
-        <% end %>
-        <%= if book.amazon_asin do %>
-          <div><span class="font-mono">ASIN:</span> {book.amazon_asin}</div>
+        <%= if book.publisher do %>
+          <div><span class="text-base-content/60">Publisher:</span> {book.publisher}</div>
         <% end %>
       </div>
     </:col>

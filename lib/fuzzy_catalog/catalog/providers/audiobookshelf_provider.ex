@@ -60,6 +60,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
 
   defp parse_libraries_config(nil), do: :all
   defp parse_libraries_config(""), do: :all
+
   defp parse_libraries_config(libraries_str) when is_binary(libraries_str) do
     libraries_str
     |> String.split(",")
@@ -88,6 +89,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   end
 
   defp filter_libraries(libraries, :all), do: libraries
+
   defp filter_libraries(libraries, library_names) when is_list(library_names) do
     Enum.filter(libraries, fn library ->
       library["name"] in library_names or library["id"] in library_names
@@ -141,7 +143,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   defp transform_item_to_book(item, library_media_type) do
     media = item["media"]
     metadata = media["metadata"] || %{}
-    
+
     # Get cover URL - Audiobookshelf provides cover path
     cover_url = build_cover_url(item)
 
@@ -196,10 +198,13 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   end
 
   # Map Audiobookshelf media types to our collection item media types
-  defp map_audiobookshelf_media_type("book"), do: "audiobook"  # Most book libraries in ABS are audiobooks
+  # Most book libraries in ABS are audiobooks
+  defp map_audiobookshelf_media_type("book"), do: "audiobook"
   defp map_audiobookshelf_media_type("ebook"), do: "ebook"
-  defp map_audiobookshelf_media_type("comic"), do: "ebook"     # Map comics to ebook since we don't have a comic type
-  defp map_audiobookshelf_media_type("podcast"), do: "audiobook" # Map podcasts to audiobook
+  # Map comics to ebook since we don't have a comic type
+  defp map_audiobookshelf_media_type("comic"), do: "ebook"
+  # Map podcasts to audiobook
+  defp map_audiobookshelf_media_type("podcast"), do: "audiobook"
   defp map_audiobookshelf_media_type(_), do: "unspecified"
 
   defp build_cover_url(item) do
@@ -211,11 +216,11 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
         else
           nil
         end
+
       _ ->
         nil
     end
   end
-
 
   defp format_genres([]), do: nil
 

@@ -7,18 +7,13 @@ defmodule FuzzyCatalogWeb.BookController do
   alias FuzzyCatalog.Collections
 
   def index(conn, _params) do
-    books = Catalog.list_books()
+    books = Collections.list_library_books()
     render(conn, :index, books: books)
   end
 
   def show(conn, %{"id" => id}) do
     book = Catalog.get_book!(id)
-
-    book_in_collection =
-      case conn.assigns[:current_scope] do
-        nil -> false
-        current_scope -> Collections.book_in_collection?(current_scope.user, book)
-      end
+    media_types = Collections.get_book_media_types(book)
 
     current_user =
       case conn.assigns[:current_scope] do
@@ -28,7 +23,7 @@ defmodule FuzzyCatalogWeb.BookController do
 
     render(conn, :show,
       book: book,
-      book_in_collection: book_in_collection,
+      media_types: media_types,
       current_user: current_user
     )
   end
@@ -129,5 +124,37 @@ defmodule FuzzyCatalogWeb.BookController do
     conn
     |> put_flash(:info, "Book deleted successfully.")
     |> redirect(to: ~p"/books")
+  end
+
+  def add_media_type(conn, %{"book_id" => book_id, "media_type" => media_type}) do
+    book = Catalog.get_book!(book_id)
+
+    case Collections.add_to_collection(book, media_type) do
+      {:ok, _collection} ->
+        conn
+        |> put_flash(:info, "#{String.capitalize(media_type)} added to library.")
+        |> redirect(to: ~p"/books/#{book}")
+
+      {:error, %Ecto.Changeset{}} ->
+        conn
+        |> put_flash(:error, "This media type is already in the library.")
+        |> redirect(to: ~p"/books/#{book}")
+    end
+  end
+
+  def remove_media_type(conn, %{"book_id" => book_id, "media_type" => media_type}) do
+    book = Catalog.get_book!(book_id)
+
+    case Collections.remove_from_collection(book, media_type) do
+      {:ok, _collection} ->
+        conn
+        |> put_flash(:info, "#{String.capitalize(media_type)} removed from library.")
+        |> redirect(to: ~p"/books/#{book}")
+
+      {:error, :not_found} ->
+        conn
+        |> put_flash(:error, "This media type is not in the library.")
+        |> redirect(to: ~p"/books/#{book}")
+    end
   end
 end

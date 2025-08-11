@@ -106,7 +106,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         case create_book_from_sync_data(book_data) do
           {:ok, book} ->
             # Add to user's collection with the media type from sync data
-            case Collections.add_to_collection(user, book, book_data.media_type) do
+            case Collections.add_to_collection(book, book_data.media_type) do
               {:ok, _collection_item} ->
                 Logger.debug(
                   "Added new book '#{book.title}' to #{user.email}'s collection as #{book_data.media_type}"
@@ -129,12 +129,12 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
       book ->
         # Book exists, maybe update cover if we don't have one
         updated_book = maybe_update_cover(book, book_data)
-        
-        # Ensure it's in the user's collection with the correct media type
-        if Collections.book_media_type_in_collection?(user, updated_book, book_data.media_type) do
+
+        # Ensure it's in the collection with the correct media type
+        if Collections.book_media_type_in_collection?(updated_book, book_data.media_type) do
           {:ok, :existing}
         else
-          case Collections.add_to_collection(user, updated_book, book_data.media_type) do
+          case Collections.add_to_collection(updated_book, book_data.media_type) do
             {:ok, _collection_item} ->
               Logger.debug(
                 "Added existing book '#{updated_book.title}' to #{user.email}'s collection as #{book_data.media_type}"
@@ -211,12 +211,13 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
 
   defp maybe_update_cover(book, book_data) do
     # Only update cover if book doesn't have one and sync data provides one
-    if (is_nil(book.cover_url) or book.cover_url == "") and 
-       not is_nil(book_data.cover_url) and book_data.cover_url != "" do
+    if (is_nil(book.cover_url) or book.cover_url == "") and
+         not is_nil(book_data.cover_url) and book_data.cover_url != "" do
       case Catalog.update_book(book, %{cover_url: book_data.cover_url}) do
         {:ok, updated_book} ->
           Logger.debug("Updated cover for existing book '#{book.title}'")
           updated_book
+
         {:error, _changeset} ->
           Logger.warning("Failed to update cover for book '#{book.title}'")
           book
