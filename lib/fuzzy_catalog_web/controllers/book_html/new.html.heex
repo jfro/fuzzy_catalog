@@ -119,6 +119,46 @@
           name="lookup_tabs"
           role="tab"
           class="tab"
+          aria-label="Physical Scanner"
+          id="tab-physical"
+        />
+        <div role="tabpanel" class="tab-content bg-base-100 border-base-300 rounded-box p-6">
+          <.form for={%{}} action={~p"/books/scan"} method="post" id="scanner-form">
+            <div class="flex items-center gap-3 mb-3">
+              <.icon name="hero-computer-desktop" class="h-6 w-6 text-primary" />
+              <h4 class="font-semibold text-primary">Physical Barcode Scanner</h4>
+            </div>
+            <p class="text-sm text-base-content/70 mb-4">
+              Use a physical barcode scanner (keyboard emulation type). Place cursor in field below and scan any book barcode.
+            </p>
+            <div class="space-y-3">
+              <label class="form-control w-full">
+                <div class="label">
+                  <span class="label-text">Scan Barcode Here</span>
+                </div>
+                <input
+                  type="text"
+                  name="barcode"
+                  id="physical-scanner-input"
+                  class="input input-bordered w-full"
+                  placeholder="Focus here and scan..."
+                  autocomplete="off"
+                  required
+                />
+              </label>
+              <div class="text-xs text-base-content/60">
+                <span class="font-medium">Tip:</span>
+                Physical scanners will automatically type the barcode and submit. Ready to scan continuously!
+              </div>
+            </div>
+          </.form>
+        </div>
+
+        <input
+          type="radio"
+          name="lookup_tabs"
+          role="tab"
+          class="tab"
           aria-label="UPC Lookup"
           id="tab-upc"
         />
@@ -416,4 +456,88 @@
       barcodeScanner.stop();
     }
   });
+
+  // Physical scanner functionality
+  function setupPhysicalScanner() {
+    const scannerInput = document.getElementById('physical-scanner-input');
+    const scannerForm = document.getElementById('scanner-form');
+    const physicalTab = document.getElementById('tab-physical');
+    
+    if (!scannerInput || !scannerForm || !physicalTab) return;
+    
+    // Auto-focus when physical scanner tab is selected
+    physicalTab.addEventListener('change', function() {
+      if (this.checked) {
+        console.log('Physical scanner tab selected');
+        setTimeout(() => {
+          scannerInput.focus();
+          scannerInput.select();
+          console.log('Scanner input focused');
+        }, 100);
+      }
+    });
+    
+    // Debug input changes
+    scannerInput.addEventListener('input', function() {
+      console.log('Input value changed:', this.value);
+      if (this.placeholder === 'Processing...') {
+        this.placeholder = 'Focus here and scan...';
+        this.disabled = false;
+      }
+    });
+    
+    // Handle Enter key to submit immediately
+    scannerInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const barcode = this.value.trim();
+        
+        console.log('Enter pressed, barcode value:', barcode);
+        
+        if (barcode.length > 0) {
+          // Show processing state
+          this.placeholder = 'Processing...';
+          this.disabled = true;
+          
+          // Create a proper form submission with the barcode value
+          const formData = new FormData(scannerForm);
+          formData.set('barcode', barcode);
+          
+          console.log('FormData contents:');
+          for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+          }
+          
+          // Submit using fetch to ensure data is sent correctly
+          fetch(scannerForm.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+              'Accept': 'text/html'
+            }
+          }).then(response => {
+            if (response.redirected) {
+              window.location.href = response.url;
+            } else {
+              window.location.reload();
+            }
+          }).catch(error => {
+            console.error('Submission error:', error);
+            this.placeholder = 'Focus here and scan...';
+            this.disabled = false;
+          });
+        } else {
+          console.log('No barcode value entered');
+        }
+      }
+    });
+    
+    // Auto-select all text when focused (for easy overwrite)
+    scannerInput.addEventListener('focus', function() {
+      this.select();
+    });
+  }
+
+  // Initialize physical scanner when page loads
+  document.addEventListener('DOMContentLoaded', setupPhysicalScanner);
 </script>

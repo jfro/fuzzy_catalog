@@ -1,6 +1,8 @@
 defmodule FuzzyCatalogWeb.BookController do
   use FuzzyCatalogWeb, :controller
 
+  require Logger
+
   alias FuzzyCatalog.Catalog
   alias FuzzyCatalog.Catalog.Book
   alias FuzzyCatalog.Catalog.BookLookup
@@ -83,6 +85,63 @@ defmodule FuzzyCatalogWeb.BookController do
   def lookup(conn, _params) do
     changeset = Catalog.change_book(%Book{})
     render(conn, :new, changeset: changeset, lookup_error: "Invalid lookup parameters")
+  end
+
+  def scan_barcode(conn, params) do
+    Logger.info("scan_barcode called with params: #{inspect(params)}")
+    
+    case params do
+      %{"barcode" => barcode} when is_binary(barcode) ->
+        clean_barcode = String.trim(barcode)
+        Logger.info("Scanning barcode: #{clean_barcode}")
+        process_barcode_scan(conn, clean_barcode)
+      
+      _ ->
+        Logger.warning("Invalid barcode params: #{inspect(params)}")
+        conn
+        |> put_flash(:error, "Invalid barcode data")
+        |> redirect(to: ~p"/books/new")
+    end
+  end
+
+  defp process_barcode_scan(conn, clean_barcode) do
+    # First check if book already exists in database
+    case Catalog.get_book_by_isbn(clean_barcode) do
+      nil ->
+        # Book doesn't exist, try to lookup and create it
+        case BookLookup.lookup_by_isbn(clean_barcode) do
+          {:ok, book_data} ->
+            # Create the book with initial media type (ensure consistent string keys)
+            book_params = 
+              book_data
+              |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+              |> Map.new()
+              |> Map.put("media_type", "unspecified")
+
+            case Catalog.create_book(book_params) do
+              {:ok, book} ->
+                conn
+                |> put_flash(:info, "Book '#{book.title}' successfully added to library!")
+                |> redirect(to: ~p"/books/#{book}")
+
+              {:error, _changeset} ->
+                conn
+                |> put_flash(:error, "Failed to add book to library. Please try again.")
+                |> redirect(to: ~p"/books/new")
+            end
+
+          {:error, reason} ->
+            conn
+            |> put_flash(:error, "Could not find book information for barcode: #{reason}")
+            |> redirect(to: ~p"/books/new")
+        end
+
+      existing_book ->
+        # Book already exists, show it
+        conn
+        |> put_flash(:info, "Book '#{existing_book.title}' is already in the library!")
+        |> redirect(to: ~p"/books/#{existing_book}")
+    end
   end
 
   def create(conn, %{"book" => book_params}) do
