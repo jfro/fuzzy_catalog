@@ -92,9 +92,21 @@ defmodule FuzzyCatalogWeb.BookController do
     
     case params do
       %{"barcode" => barcode} when is_binary(barcode) ->
-        clean_barcode = String.trim(barcode)
-        Logger.info("Scanning barcode: #{clean_barcode}")
-        process_barcode_scan(conn, clean_barcode)
+        raw_barcode = String.trim(barcode)
+        Logger.info("Raw barcode: #{raw_barcode}")
+        
+        # Extract valid ISBN from potentially longer barcode
+        case extract_isbn(raw_barcode) do
+          {:ok, isbn} ->
+            Logger.info("Extracted ISBN: #{isbn}")
+            process_barcode_scan(conn, isbn)
+          
+          {:error, reason} ->
+            Logger.warning("Failed to extract ISBN: #{reason}")
+            conn
+            |> put_flash(:error, "Invalid ISBN format in barcode: #{reason}")
+            |> redirect(to: ~p"/books/new")
+        end
       
       _ ->
         Logger.warning("Invalid barcode params: #{inspect(params)}")
@@ -141,6 +153,37 @@ defmodule FuzzyCatalogWeb.BookController do
         conn
         |> put_flash(:info, "Book '#{existing_book.title}' is already in the library!")
         |> redirect(to: ~p"/books/#{existing_book}")
+    end
+  end
+
+  # Extract valid ISBN from potentially longer barcode
+  defp extract_isbn(barcode) do
+    # Remove any non-digit characters except X (for ISBN-10)
+    clean = String.replace(barcode, ~r/[^0-9X]/, "")
+    
+    cond do
+      # ISBN-13 (13 digits)
+      String.length(clean) >= 13 ->
+        isbn13 = String.slice(clean, 0, 13)
+        if validate_isbn_format(isbn13), do: {:ok, isbn13}, else: {:error, "Invalid ISBN-13 format"}
+      
+      # ISBN-10 (10 digits, may end with X)
+      String.length(clean) >= 10 ->
+        isbn10 = String.slice(clean, 0, 10)
+        if validate_isbn_format(isbn10), do: {:ok, isbn10}, else: {:error, "Invalid ISBN-10 format"}
+      
+      # Too short to be a valid ISBN
+      true ->
+        {:error, "Barcode too short to contain valid ISBN"}
+    end
+  end
+
+  # Basic ISBN format validation
+  defp validate_isbn_format(isbn) do
+    case String.length(isbn) do
+      13 -> String.match?(isbn, ~r/^[0-9]{13}$/)
+      10 -> String.match?(isbn, ~r/^[0-9]{9}[0-9X]$/)
+      _ -> false
     end
   end
 
