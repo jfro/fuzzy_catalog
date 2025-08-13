@@ -65,6 +65,7 @@ defmodule FuzzyCatalogWeb.Layouts do
               <details>
                 <summary class="btn btn-ghost">
                   <.icon name="hero-user-circle" class="h-4 w-4 mr-1" />
+                  {@current_scope.user.email}
                 </summary>
                 <ul class="p-2 bg-base-100 rounded-t-none z-50">
                   <li>
