@@ -100,3 +100,10 @@ config :fuzzy_catalog, :audiobookshelf,
   url: System.get_env("AUDIOBOOKSHELF_URL"),
   api_key: System.get_env("AUDIOBOOKSHELF_API_KEY"),
   libraries: System.get_env("AUDIOBOOKSHELF_LIBRARIES")
+
+# Storage configuration for development
+config :fuzzy_catalog, :storage,
+  local: [
+    base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads/covers",
+    base_url: "/uploads/covers"
+  ]

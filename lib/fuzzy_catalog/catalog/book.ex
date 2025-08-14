@@ -9,7 +9,7 @@ defmodule FuzzyCatalog.Catalog.Book do
     field :isbn10, :string
     field :isbn13, :string
     field :amazon_asin, :string
-    field :cover_url, :string
+    field :cover_image_key, :string
 
     # Publishing Information
     field :publisher, :string
@@ -39,7 +39,7 @@ defmodule FuzzyCatalog.Catalog.Book do
       :isbn10,
       :isbn13,
       :amazon_asin,
-      :cover_url,
+      :cover_image_key,
       :publisher,
       :publication_date,
       :pages,

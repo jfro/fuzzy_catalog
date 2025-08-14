@@ -262,7 +262,6 @@
                     <input type="hidden" name="author" value={book.author} />
                     <input type="hidden" name="isbn10" value={book.isbn10 || ""} />
                     <input type="hidden" name="isbn13" value={book.isbn13 || ""} />
-                    <input type="hidden" name="cover_url" value={book.cover_url || ""} />
                     <.button type="submit" class="btn btn-xs btn-outline">Use This Book</.button>
                   </.form>
                 </div>
@@ -283,7 +282,6 @@
               <input type="hidden" name="author" value={@lookup_results.author} />
               <input type="hidden" name="isbn10" value={@lookup_results.isbn10 || ""} />
               <input type="hidden" name="isbn13" value={@lookup_results.isbn13 || ""} />
-              <input type="hidden" name="cover_url" value={@lookup_results.cover_url || ""} />
               <.button type="submit" class="btn btn-sm btn-primary">Use This Book</.button>
             </.form>
           </div>
@@ -299,7 +297,7 @@
     </div>
   <% end %>
 
-  <.form :let={f} for={@changeset} action={~p"/books"} id="book-form">
+  <.form :let={f} for={@changeset} action={~p"/books"} id="book-form" multipart={true}>
     <%= if @changeset.action do %>
       <div class="alert alert-error mb-4">
         <p>Oops, something went wrong! Please check the errors below.</p>
@@ -328,12 +326,18 @@
       <.input field={f[:isbn10]} type="text" label="ISBN-10" />
       <.input field={f[:isbn13]} type="text" label="ISBN-13" />
       <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
+      
+<!-- File upload for cover image -->
       <.input
-        field={f[:cover_url]}
-        type="url"
-        label="Cover Image URL (optional)"
-        placeholder="https://example.com/cover.jpg"
+        field={f[:cover_image]}
+        type="file"
+        label="Upload Cover Image (optional)"
+        accept="image/*"
       />
+
+      <p class="text-xs text-gray-500 mt-1">
+        Supported formats: JPG, PNG, GIF, WebP. Max size: 10MB.
+      </p>
     </div>
 
     <div class="mt-6">

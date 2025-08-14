@@ -215,10 +215,13 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
         external_id: "invalid-#{:os.system_time(:millisecond)}"
       }
     else
-
       media = Map.get(item, "media")
+
       if not is_map(media) do
-        Logger.error("Expected media to be a map but got: #{inspect(media)} for item: #{inspect(item)}")
+        Logger.error(
+          "Expected media to be a map but got: #{inspect(media)} for item: #{inspect(item)}"
+        )
+
         # Return a minimal book structure
         %{
           title: Map.get(item, "name", "Unknown Title"),

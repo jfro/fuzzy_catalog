@@ -7,6 +7,7 @@ defmodule FuzzyCatalogWeb.BookController do
   alias FuzzyCatalog.Catalog.Book
   alias FuzzyCatalog.Catalog.BookLookup
   alias FuzzyCatalog.Collections
+  alias FuzzyCatalog.Storage
 
   def index(conn, _params) do
     books = Collections.list_library_books()
@@ -132,7 +133,10 @@ defmodule FuzzyCatalogWeb.BookController do
               |> Map.new()
               |> Map.put("media_type", "unspecified")
 
-            case Catalog.create_book(book_params) do
+            # Download and store cover if available
+            processed_params = download_cover_from_params(book_params)
+
+            case Catalog.create_book(processed_params) do
               {:ok, book} ->
                 conn
                 |> put_flash(:info, "Book '#{book.title}' successfully added to library!")
@@ -196,7 +200,10 @@ defmodule FuzzyCatalogWeb.BookController do
   end
 
   def create(conn, %{"book" => book_params}) do
-    case Catalog.create_book(book_params) do
+    # For create, we don't have an existing book so pass %Book{}
+    processed_params = process_cover_params(book_params, %Book{})
+
+    case Catalog.create_book(processed_params) do
       {:ok, book} ->
         conn
         |> put_flash(:info, "Book created successfully.")
@@ -215,8 +222,9 @@ defmodule FuzzyCatalogWeb.BookController do
 
   def update(conn, %{"id" => id, "book" => book_params}) do
     book = Catalog.get_book!(id)
+    processed_params = process_cover_params(book_params, book)
 
-    case Catalog.update_book(book, book_params) do
+    case Catalog.update_book(book, processed_params) do
       {:ok, book} ->
         conn
         |> put_flash(:info, "Book updated successfully.")
@@ -229,6 +237,12 @@ defmodule FuzzyCatalogWeb.BookController do
 
   def delete(conn, %{"id" => id}) do
     book = Catalog.get_book!(id)
+
+    # Clean up cover image if it exists
+    if book.cover_image_key do
+      Storage.delete_cover(book.cover_image_key)
+    end
+
     {:ok, _book} = Catalog.delete_book(book)
 
     conn
@@ -322,7 +336,10 @@ defmodule FuzzyCatalogWeb.BookController do
               |> Map.new()
               |> Map.put("media_type", media_type)
 
-            case Catalog.create_book(book_params) do
+            # Download and store cover if available
+            processed_params = download_cover_from_params(book_params)
+
+            case Catalog.create_book(processed_params) do
               {:ok, book} ->
                 json(conn, %{
                   success: true,
@@ -358,5 +375,88 @@ defmodule FuzzyCatalogWeb.BookController do
     conn
     |> put_status(400)
     |> json(%{error: "Missing required parameters: barcode and media_type"})
+  end
+
+  # Private helper functions
+
+  defp process_cover_params(book_params, existing_book) do
+    book_params
+    |> handle_cover_upload()
+    |> handle_cover_removal(existing_book)
+  end
+
+  defp handle_cover_upload(book_params) do
+    case book_params["cover_image"] do
+      %Plug.Upload{} = upload ->
+        case store_uploaded_cover(upload) do
+          {:ok, storage_key} ->
+            Map.put(book_params, "cover_image_key", storage_key)
+
+          {:error, reason} ->
+            Logger.error("Failed to upload cover image: #{reason}")
+            book_params
+        end
+
+      _ ->
+        book_params
+    end
+    |> Map.delete("cover_image")
+  end
+
+  defp handle_cover_removal(book_params, existing_book) do
+    case book_params["remove_cover"] do
+      "true" ->
+        # Clean up old cover if it exists
+        if existing_book.cover_image_key do
+          Storage.delete_cover(existing_book.cover_image_key)
+        end
+
+        book_params
+        |> Map.put("cover_image_key", nil)
+        |> Map.delete("remove_cover")
+
+      _ ->
+        Map.delete(book_params, "remove_cover")
+    end
+  end
+
+  defp store_uploaded_cover(%Plug.Upload{path: path, content_type: content_type}) do
+    case File.read(path) do
+      {:ok, content} ->
+        extension =
+          content_type
+          |> String.split("/")
+          |> List.last()
+          |> case do
+            "jpeg" -> ".jpg"
+            "jpg" -> ".jpg"
+            "png" -> ".png"
+            "gif" -> ".gif"
+            "webp" -> ".webp"
+            _ -> ".jpg"
+          end
+
+        Storage.store_cover(content, content_type: content_type, extension: extension)
+
+      {:error, reason} ->
+        {:error, "Failed to read uploaded file: #{reason}"}
+    end
+  end
+
+  defp download_cover_from_params(book_params) do
+    cover_url = book_params["cover_url"]
+
+    if is_binary(cover_url) && String.trim(cover_url) != "" do
+      case Storage.download_and_store_cover(cover_url) do
+        {:ok, storage_key} ->
+          Map.put(book_params, "cover_image_key", storage_key)
+
+        {:error, reason} ->
+          Logger.warning("Failed to download cover during book creation: #{reason}")
+          book_params
+      end
+    else
+      book_params
+    end
   end
 end

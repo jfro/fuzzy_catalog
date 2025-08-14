@@ -17,17 +17,31 @@
   <.table id="books" rows={@books}>
     <:col :let={book} label="Cover">
       <.link navigate={~p"/books/#{book}"} class="block">
-        <%= if cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) do %>
-          <img
-            src={cover_url}
-            alt={"Cover of #{book.title}"}
-            class="h-16 w-12 object-cover rounded shadow-sm"
-            onerror="this.style.display='none'"
-          />
-        <% else %>
-          <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
-            <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
-          </div>
+        <%= cond do %>
+          <% book.cover_image_key && match?({:ok, _}, FuzzyCatalog.Storage.get_cover_url(book.cover_image_key)) -> %>
+            <img
+              src={FuzzyCatalog.Storage.get_cover_url(book.cover_image_key) |> elem(1)}
+              alt={"Cover of #{book.title}"}
+              class="h-16 w-12 object-cover rounded shadow-sm"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
+              <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+            </div>
+          <% cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) -> %>
+            <img
+              src={cover_url}
+              alt={"Cover of #{book.title}"}
+              class="h-16 w-12 object-cover rounded shadow-sm"
+              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+            />
+            <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
+              <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+            </div>
+          <% true -> %>
+            <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
+              <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+            </div>
         <% end %>
       </.link>
     </:col>

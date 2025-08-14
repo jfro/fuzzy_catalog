@@ -32,6 +32,14 @@ config :fuzzy_catalog, :book_lookup,
     FuzzyCatalog.Catalog.Providers.LibraryOfCongressProvider
   ]
 
+# File storage configuration
+config :fuzzy_catalog, :storage,
+  backend: FuzzyCatalog.Storage.Backends.LocalBackend,
+  local: [
+    base_path: "priv/static/uploads/covers",
+    base_url: "/uploads/covers"
+  ]
+
 # Configures the endpoint
 config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
   url: [host: "localhost"],
