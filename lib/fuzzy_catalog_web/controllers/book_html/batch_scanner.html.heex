@@ -1,0 +1,391 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    Batch Book Scanner
+    <:subtitle>Scan multiple books quickly with a physical barcode scanner</:subtitle>
+  </.header>
+  
+<!-- Scanner Control Section -->
+  <div class="card bg-base-200 mb-6">
+    <div class="card-body">
+      <div class="flex items-center justify-between mb-4">
+        <div class="flex items-center gap-3">
+          <.icon name="hero-computer-desktop" class="h-8 w-8 text-primary" />
+          <div>
+            <h3 class="card-title">Batch Scanner Ready</h3>
+            <p class="text-sm text-base-content/70">
+              Physical barcode scanner mode - ready to scan multiple books
+            </p>
+          </div>
+        </div>
+        <div class="badge badge-success" id="scanner-status">Ready</div>
+      </div>
+      
+<!-- Scanner Input -->
+      <div class="space-y-4">
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-medium">Barcode Scanner Input</span>
+            <span class="label-text-alt text-xs">Auto-focus enabled</span>
+          </label>
+          <input
+            type="text"
+            id="batch-scanner-input"
+            class="input input-bordered input-lg w-full text-center font-mono"
+            placeholder="Ready to scan - focus here and scan barcode..."
+            autocomplete="off"
+            autofocus
+          />
+        </div>
+        
+<!-- Media Type Selection -->
+        <div class="form-control w-full">
+          <label class="label">
+            <span class="label-text font-medium">Default Media Type</span>
+            <span class="label-text-alt text-xs">Applied to new books</span>
+          </label>
+          <select id="default-media-type" class="select select-bordered w-full">
+            <option value="unspecified">Unspecified</option>
+            <option value="hardcover" selected>Hardcover</option>
+            <option value="paperback">Paperback</option>
+            <option value="audiobook">Audiobook</option>
+            <option value="ebook">eBook</option>
+          </select>
+        </div>
+        
+<!-- Control Buttons -->
+        <div class="flex gap-3">
+          <button
+            id="clear-batch-btn"
+            class="btn btn-outline btn-warning"
+            onclick="clearBatch()"
+          >
+            <.icon name="hero-trash" class="h-4 w-4 mr-2" /> Clear Batch
+          </button>
+          <button
+            id="focus-scanner-btn"
+            class="btn btn-outline"
+            onclick="focusScanner()"
+          >
+            <.icon name="hero-cursor-arrow-rays" class="h-4 w-4 mr-2" /> Focus Scanner
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+<!-- Statistics -->
+  <div class="stats shadow w-full mb-6">
+    <div class="stat">
+      <div class="stat-figure text-primary">
+        <.icon name="hero-check-circle" class="h-8 w-8" />
+      </div>
+      <div class="stat-title">Books Added</div>
+      <div class="stat-value text-primary" id="books-added-count">0</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-figure text-warning">
+        <.icon name="hero-exclamation-triangle" class="h-8 w-8" />
+      </div>
+      <div class="stat-title">Already Exists</div>
+      <div class="stat-value text-warning" id="exists-count">0</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-figure text-error">
+        <.icon name="hero-x-circle" class="h-8 w-8" />
+      </div>
+      <div class="stat-title">Errors</div>
+      <div class="stat-value text-error" id="error-count">0</div>
+    </div>
+  </div>
+  
+<!-- Batch Results -->
+  <div class="card bg-base-100 border">
+    <div class="card-body">
+      <h3 class="card-title">
+        Batch Results
+        <div class="badge badge-neutral" id="total-scanned">0 scanned</div>
+      </h3>
+
+      <div id="batch-results" class="space-y-3 max-h-96 overflow-y-auto">
+        <div class="text-center text-base-content/50 py-8" id="no-results">
+          <.icon name="hero-inbox" class="h-12 w-12 mx-auto mb-2 opacity-50" />
+          <p>No books scanned yet. Start scanning to see results here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+<!-- Navigation -->
+  <div class="mt-6 flex gap-3">
+    <.link navigate={~p"/books"} class="btn btn-outline">
+      <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" /> Back to Library
+    </.link>
+    <.link navigate={~p"/books/new"} class="btn btn-outline">
+      <.icon name="hero-plus" class="h-4 w-4 mr-2" /> Add Single Book
+    </.link>
+  </div>
+</Layouts.app>
+
+<script>
+  let batchResults = [];
+  let counters = {
+    added: 0,
+    exists: 0,
+    errors: 0
+  };
+
+  function updateCounters() {
+    document.getElementById('books-added-count').textContent = counters.added;
+    document.getElementById('exists-count').textContent = counters.exists;
+    document.getElementById('error-count').textContent = counters.errors;
+    document.getElementById('total-scanned').textContent = `${batchResults.length} scanned`;
+  }
+
+  function updateScannerStatus(status, isProcessing = false) {
+    const statusEl = document.getElementById('scanner-status');
+    const inputEl = document.getElementById('batch-scanner-input');
+    
+    statusEl.textContent = status;
+    statusEl.className = isProcessing ? 'badge badge-warning' : 'badge badge-success';
+    
+    if (isProcessing) {
+      inputEl.placeholder = 'Processing...';
+      inputEl.disabled = true;
+    } else {
+      inputEl.placeholder = 'Ready to scan - focus here and scan barcode...';
+      inputEl.disabled = false;
+      inputEl.value = '';
+      setTimeout(() => inputEl.focus(), 100);
+    }
+  }
+
+  function addResultItem(type, data) {
+    const resultsContainer = document.getElementById('batch-results');
+    const noResults = document.getElementById('no-results');
+    
+    // Hide no results message
+    if (noResults) {
+      noResults.style.display = 'none';
+    }
+
+    // Create result item
+    const resultItem = document.createElement('div');
+    resultItem.className = 'border rounded-lg p-4';
+    
+    const timestamp = new Date().toLocaleTimeString();
+    
+    if (type === 'added') {
+      resultItem.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="badge badge-success badge-sm mt-1">Added</div>
+          <div class="flex-1">
+            <div class="font-semibold text-success">${data.book.title}</div>
+            <div class="text-sm text-base-content/70">by ${data.book.author}</div>
+            <div class="text-xs text-base-content/50 mt-1">
+              ISBN: ${data.book.isbn} • Media: ${data.book.media_type} • ${timestamp}
+            </div>
+          </div>
+          <div class="dropdown dropdown-end">
+            <button class="btn btn-ghost btn-xs" tabindex="0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
+              </svg>
+            </button>
+            <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
+              <li><a href="/books/${data.book.id}" class="text-xs">View Book</a></li>
+            </ul>
+          </div>
+        </div>
+      `;
+      counters.added++;
+    } else if (type === 'exists') {
+      resultItem.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="badge badge-warning badge-sm mt-1">Exists</div>
+          <div class="flex-1">
+            <div class="font-semibold text-warning">${data.book.title}</div>
+            <div class="text-sm text-base-content/70">by ${data.book.author}</div>
+            <div class="text-xs text-base-content/50 mt-1">
+              ISBN: ${data.isbn} • Already in library • ${timestamp}
+            </div>
+          </div>
+          <div class="dropdown dropdown-end">
+            <button class="btn btn-ghost btn-xs" tabindex="0">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01"></path>
+              </svg>
+            </button>
+            <ul class="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-32 z-50">
+              <li><a href="/books/${data.book.id}" class="text-xs">View Book</a></li>
+            </ul>
+          </div>
+        </div>
+      `;
+      counters.exists++;
+    } else if (type === 'error') {
+      resultItem.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="badge badge-error badge-sm mt-1">Error</div>
+          <div class="flex-1">
+            <div class="font-semibold text-error">Scan Failed</div>
+            <div class="text-sm text-base-content/70">${data.error}</div>
+            <div class="text-xs text-base-content/50 mt-1">
+              ${data.isbn ? `ISBN: ${data.isbn} • ` : ''}${timestamp}
+            </div>
+          </div>
+        </div>
+      `;
+      counters.errors++;
+    }
+
+    // Add to beginning of results
+    resultsContainer.insertBefore(resultItem, resultsContainer.firstChild);
+    
+    // Store in results array
+    batchResults.unshift({ type, data, timestamp });
+    
+    // Update counters
+    updateCounters();
+  }
+
+  async function processBarcode(barcode) {
+    const mediaType = document.getElementById('default-media-type').value;
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+    
+    updateScannerStatus('Processing...', true);
+    
+    try {
+      // First check if book exists
+      const checkResponse = await fetch('/books/batch-check', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: `barcode=${encodeURIComponent(barcode)}`
+      });
+      
+      const checkData = await checkResponse.json();
+      
+      if (checkData.exists) {
+        // Book already exists
+        addResultItem('exists', checkData);
+        updateScannerStatus('Ready');
+        return;
+      }
+      
+      if (checkData.error) {
+        addResultItem('error', { error: checkData.error, isbn: checkData.isbn });
+        updateScannerStatus('Ready');
+        return;
+      }
+      
+      // Book doesn't exist, try to add it
+      const addResponse = await fetch('/books/batch-add', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRF-Token': csrfToken,
+        },
+        body: `barcode=${encodeURIComponent(barcode)}&media_type=${encodeURIComponent(mediaType)}`
+      });
+      
+      const addData = await addResponse.json();
+      
+      if (addData.success) {
+        addResultItem('added', addData);
+      } else {
+        addResultItem('error', { error: addData.error, isbn: checkData.isbn });
+      }
+      
+    } catch (error) {
+      console.error('Network error:', error);
+      addResultItem('error', { error: 'Network error occurred', isbn: null });
+    }
+    
+    updateScannerStatus('Ready');
+  }
+
+  function focusScanner() {
+    const input = document.getElementById('batch-scanner-input');
+    input.focus();
+    input.select();
+  }
+
+  function clearBatch() {
+    if (batchResults.length === 0) return;
+    
+    if (confirm('Are you sure you want to clear all batch results? This cannot be undone.')) {
+      batchResults = [];
+      counters = { added: 0, exists: 0, errors: 0 };
+      
+      // Clear results display
+      const resultsContainer = document.getElementById('batch-results');
+      resultsContainer.innerHTML = `
+        <div class="text-center text-base-content/50 py-8" id="no-results">
+          <svg class="h-12 w-12 mx-auto mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m7-6v2m0 0v2m0-2h2m-2 0H9"></path>
+          </svg>
+          <p>No books scanned yet. Start scanning to see results here.</p>
+        </div>
+      `;
+      
+      updateCounters();
+      focusScanner();
+    }
+  }
+
+  // Setup scanner input handling
+  function setupBatchScanner() {
+    const scannerInput = document.getElementById('batch-scanner-input');
+    
+    if (!scannerInput) return;
+    
+    // Handle barcode input
+    scannerInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const barcode = this.value.trim();
+        
+        if (barcode.length > 0) {
+          processBarcode(barcode);
+        }
+      }
+    });
+    
+    // Auto-select text when focused
+    scannerInput.addEventListener('focus', function() {
+      this.select();
+    });
+    
+    // Re-focus when clicked
+    scannerInput.addEventListener('click', function() {
+      this.focus();
+      this.select();
+    });
+    
+    // Keep focus on input for continuous scanning
+    document.addEventListener('click', function(e) {
+      // Don't refocus if clicking on dropdown menus or buttons
+      if (!e.target.closest('.dropdown') && !e.target.closest('button') && 
+          !e.target.closest('a') && !e.target.closest('select')) {
+        if (!scannerInput.disabled) {
+          scannerInput.focus();
+        }
+      }
+    });
+  }
+
+  // Initialize when page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    setupBatchScanner();
+    focusScanner();
+  });
+
+  // Cleanup and refocus when returning to page
+  window.addEventListener('focus', function() {
+    setTimeout(focusScanner, 100);
+  });
+</script>

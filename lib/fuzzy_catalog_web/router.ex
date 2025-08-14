@@ -59,6 +59,9 @@ defmodule FuzzyCatalogWeb.Router do
 
     post "/books/lookup", BookController, :lookup
     post "/books/scan", BookController, :scan_barcode
+    get "/books/batch-scanner", BookController, :batch_scanner
+    post "/books/batch-check", BookController, :batch_check
+    post "/books/batch-add", BookController, :batch_add
     resources "/books", BookController
     post "/books/:book_id/add_media_type", BookController, :add_media_type
     delete "/books/:book_id/remove_media_type", BookController, :remove_media_type

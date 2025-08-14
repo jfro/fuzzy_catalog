@@ -267,4 +267,96 @@ defmodule FuzzyCatalogWeb.BookController do
         |> redirect(to: ~p"/books/#{book}")
     end
   end
+
+  def batch_scanner(conn, _params) do
+    render(conn, :batch_scanner)
+  end
+
+  def batch_check(conn, %{"barcode" => barcode}) when is_binary(barcode) do
+    raw_barcode = String.trim(barcode)
+    Logger.info("Batch check for barcode: #{raw_barcode}")
+
+    case extract_isbn(raw_barcode) do
+      {:ok, isbn} ->
+        case Catalog.get_book_by_isbn(isbn) do
+          nil ->
+            json(conn, %{exists: false, isbn: isbn})
+
+          existing_book ->
+            json(conn, %{
+              exists: true,
+              isbn: isbn,
+              book: %{
+                id: existing_book.id,
+                title: existing_book.title,
+                author: existing_book.author
+              }
+            })
+        end
+
+      {:error, reason} ->
+        conn
+        |> put_status(400)
+        |> json(%{error: "Invalid barcode: #{reason}"})
+    end
+  end
+
+  def batch_check(conn, _params) do
+    conn
+    |> put_status(400)
+    |> json(%{error: "Missing barcode parameter"})
+  end
+
+  def batch_add(conn, %{"barcode" => barcode, "media_type" => media_type})
+      when is_binary(barcode) and is_binary(media_type) do
+    raw_barcode = String.trim(barcode)
+    Logger.info("Batch add for barcode: #{raw_barcode}, media_type: #{media_type}")
+
+    case extract_isbn(raw_barcode) do
+      {:ok, isbn} ->
+        case BookLookup.lookup_by_isbn(isbn) do
+          {:ok, book_data} ->
+            book_params =
+              book_data
+              |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+              |> Map.new()
+              |> Map.put("media_type", media_type)
+
+            case Catalog.create_book(book_params) do
+              {:ok, book} ->
+                json(conn, %{
+                  success: true,
+                  book: %{
+                    id: book.id,
+                    title: book.title,
+                    author: book.author,
+                    isbn: isbn,
+                    media_type: media_type
+                  }
+                })
+
+              {:error, changeset} ->
+                conn
+                |> put_status(400)
+                |> json(%{error: "Failed to create book", details: changeset.errors})
+            end
+
+          {:error, reason} ->
+            conn
+            |> put_status(404)
+            |> json(%{error: "Book not found: #{reason}"})
+        end
+
+      {:error, reason} ->
+        conn
+        |> put_status(400)
+        |> json(%{error: "Invalid barcode: #{reason}"})
+    end
+  end
+
+  def batch_add(conn, _params) do
+    conn
+    |> put_status(400)
+    |> json(%{error: "Missing required parameters: barcode and media_type"})
+  end
 end
