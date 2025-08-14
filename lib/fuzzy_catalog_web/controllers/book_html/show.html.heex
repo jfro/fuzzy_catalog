@@ -99,6 +99,19 @@
               {@book.cover_url}
             </a>
           </:item>
+          <:item
+            :if={FuzzyCatalog.Catalog.BookLookup.openlibrary_url(@book.isbn13 || @book.isbn10)}
+            title="OpenLibrary"
+          >
+            <a
+              href={FuzzyCatalog.Catalog.BookLookup.openlibrary_url(@book.isbn13 || @book.isbn10)}
+              target="_blank"
+              class="link link-primary text-sm"
+            >
+              View on OpenLibrary
+              <.icon name="hero-arrow-top-right-on-square" class="h-4 w-4 inline ml-1" />
+            </a>
+          </:item>
         </.list>
       </div>
       

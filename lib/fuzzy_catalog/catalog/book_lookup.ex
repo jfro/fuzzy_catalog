@@ -150,6 +150,25 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   end
 
   @doc """
+  Generate OpenLibrary book page URL from ISBN.
+
+  ## Examples
+
+      iex> FuzzyCatalog.Catalog.BookLookup.openlibrary_url("9780141439518")
+      "https://openlibrary.org/isbn/9780141439518"
+
+      iex> FuzzyCatalog.Catalog.BookLookup.openlibrary_url(nil)
+      nil
+  """
+  def openlibrary_url(nil), do: nil
+  def openlibrary_url(""), do: nil
+
+  def openlibrary_url(isbn) when is_binary(isbn) do
+    clean_isbn = String.replace(isbn, ~r/[^0-9X]/, "")
+    "https://openlibrary.org/isbn/#{clean_isbn}"
+  end
+
+  @doc """
   Get list of available providers with their information.
   """
   def providers do
