@@ -49,7 +49,13 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   def lookup_by_title(title) when is_binary(title) do
     case get_providers() do
       [primary_provider | _] ->
-        primary_provider.lookup_by_title(title)
+        case primary_provider.lookup_by_title(title) do
+          {:ok, books} when is_list(books) ->
+            {:ok, Enum.map(books, &normalize_book_data/1)}
+          
+          result ->
+            result
+        end
 
       [] ->
         {:error, "No providers configured"}
@@ -76,7 +82,13 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
         {:error, "UPC lookup not supported by any provider"}
 
       [provider | _] ->
-        provider.lookup_by_upc(upc)
+        case provider.lookup_by_upc(upc) do
+          {:ok, books} when is_list(books) ->
+            {:ok, Enum.map(books, &normalize_book_data/1)}
+          
+          result ->
+            result
+        end
     end
   end
 
@@ -94,7 +106,13 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
       {:error, "Invalid ISBN format"}
   """
   def lookup_by_isbn_google(isbn) when is_binary(isbn) do
-    GoogleBooksProvider.lookup_by_isbn(isbn)
+    case GoogleBooksProvider.lookup_by_isbn(isbn) do
+      {:ok, book_data} ->
+        {:ok, normalize_book_data(book_data)}
+      
+      result ->
+        result
+    end
   end
 
   @doc """
@@ -156,11 +174,36 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
     case provider.lookup_by_isbn(isbn) do
       {:ok, book_data} ->
         Logger.info("Success with provider: #{provider.provider_name()}")
-        {:ok, book_data}
+        {:ok, normalize_book_data(book_data)}
 
       {:error, reason} ->
         Logger.info("Failed with provider #{provider.provider_name()}: #{reason}")
         try_providers_for_isbn(remaining_providers, isbn)
     end
   end
+
+  defp normalize_book_data(book_data) when is_map(book_data) do
+    book_data
+    |> normalize_pages()
+    |> normalize_series_number()
+    |> normalize_cover_url()
+  end
+
+  defp normalize_pages(%{pages: 0} = book_data), do: %{book_data | pages: nil}
+  defp normalize_pages(book_data), do: book_data
+
+  defp normalize_series_number(%{series_number: 0} = book_data), do: %{book_data | series_number: nil}
+  defp normalize_series_number(book_data), do: book_data
+
+  defp normalize_cover_url(%{cover_url: nil} = book_data) do
+    # Try to generate OpenLibrary cover URL as fallback
+    isbn = book_data[:isbn13] || book_data[:isbn10]
+    
+    case isbn do
+      nil -> book_data
+      isbn_value -> %{book_data | cover_url: cover_url(isbn_value, :medium)}
+    end
+  end
+  
+  defp normalize_cover_url(book_data), do: book_data
 end

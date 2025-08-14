@@ -181,4 +181,5 @@ defmodule FuzzyCatalog.Catalog.Providers.GoogleBooksProvider do
         end
     end
   end
+
 end
