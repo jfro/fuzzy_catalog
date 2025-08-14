@@ -8,10 +8,17 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   """
 
   require Logger
-  alias FuzzyCatalog.Catalog.Providers.{OpenLibraryProvider, GoogleBooksProvider}
+
+  alias FuzzyCatalog.Catalog.Providers.{
+    OpenLibraryProvider,
+    GoogleBooksProvider,
+    LibraryOfCongressProvider
+  }
 
   @default_providers [
-    OpenLibraryProvider
+    OpenLibraryProvider,
+    GoogleBooksProvider,
+    LibraryOfCongressProvider
   ]
 
   @doc """
@@ -24,7 +31,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
 
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_isbn("0451526538")
       {:ok, %{title: "...", author: "...", ...}}
-      
+
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_isbn("invalid")
       {:error, "Invalid ISBN format"}
   """
@@ -42,7 +49,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
 
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_title("Lord of the Rings")
       {:ok, [%{title: "...", author: "...", ...}, ...]}
-      
+
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_title("")
       {:error, "Title cannot be empty"}
   """
@@ -52,7 +59,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
         case primary_provider.lookup_by_title(title) do
           {:ok, books} when is_list(books) ->
             {:ok, Enum.map(books, &normalize_book_data/1)}
-          
+
           result ->
             result
         end
@@ -85,7 +92,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
         case provider.lookup_by_upc(upc) do
           {:ok, books} when is_list(books) ->
             {:ok, Enum.map(books, &normalize_book_data/1)}
-          
+
           result ->
             result
         end
@@ -101,7 +108,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
 
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_isbn_google("9780451526538")
       {:ok, %{title: "...", author: "...", series: "..., ...}}
-      
+
       iex> FuzzyCatalog.Catalog.BookLookup.lookup_by_isbn_google("invalid")
       {:error, "Invalid ISBN format"}
   """
@@ -109,7 +116,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
     case GoogleBooksProvider.lookup_by_isbn(isbn) do
       {:ok, book_data} ->
         {:ok, normalize_book_data(book_data)}
-      
+
       result ->
         result
     end
@@ -122,7 +129,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
 
       iex> FuzzyCatalog.Catalog.BookLookup.cover_url("9780141439518", :small)
       "https://covers.openlibrary.org/b/isbn/9780141439518-S.jpg"
-      
+
       iex> FuzzyCatalog.Catalog.BookLookup.cover_url("9780141439518", :medium)
       "https://covers.openlibrary.org/b/isbn/9780141439518-M.jpg"
   """
@@ -192,18 +199,20 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   defp normalize_pages(%{pages: 0} = book_data), do: %{book_data | pages: nil}
   defp normalize_pages(book_data), do: book_data
 
-  defp normalize_series_number(%{series_number: 0} = book_data), do: %{book_data | series_number: nil}
+  defp normalize_series_number(%{series_number: 0} = book_data),
+    do: %{book_data | series_number: nil}
+
   defp normalize_series_number(book_data), do: book_data
 
   defp normalize_cover_url(%{cover_url: nil} = book_data) do
     # Try to generate OpenLibrary cover URL as fallback
     isbn = book_data[:isbn13] || book_data[:isbn10]
-    
+
     case isbn do
       nil -> book_data
       isbn_value -> %{book_data | cover_url: cover_url(isbn_value, :medium)}
     end
   end
-  
+
   defp normalize_cover_url(book_data), do: book_data
 end
