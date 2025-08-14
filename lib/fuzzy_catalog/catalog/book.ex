@@ -24,7 +24,7 @@ defmodule FuzzyCatalog.Catalog.Book do
     field :series_number, :integer
     field :original_title, :string
 
-    has_many :collections, FuzzyCatalog.Collections.Collection
+    has_many :collection_items, FuzzyCatalog.Collections.CollectionItem
 
     timestamps()
   end

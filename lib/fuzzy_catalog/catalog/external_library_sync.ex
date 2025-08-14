@@ -3,13 +3,11 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   Service for synchronizing books from external libraries.
 
   Handles the coordination between external library providers and the local database,
-  ensuring books are properly imported and associated with users.
+  ensuring books are properly imported and added to the collection.
   """
 
   require Logger
-  import Ecto.Query
-  alias FuzzyCatalog.{Catalog, Collections, Repo}
-  alias FuzzyCatalog.Accounts.User
+  alias FuzzyCatalog.{Catalog, Collections}
 
   @doc """
   Synchronize books from all available external library providers.
@@ -56,30 +54,22 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
           errors: []
         }
 
-        first_user = get_first_user()
+        Logger.info("Found #{length(books)} books from #{provider_module.provider_name()}")
 
-        if is_nil(first_user) do
-          error = "No users found in database - books cannot be synchronized"
-          Logger.error(error)
-          {provider_module, %{stats | errors: [error]}}
-        else
-          Logger.info("Found #{length(books)} books from #{provider_module.provider_name()}")
+        Enum.reduce(books, {provider_module, stats}, fn book_data, {mod, acc_stats} ->
+          case sync_book(book_data) do
+            {:ok, :new} ->
+              {mod, %{acc_stats | new_books: acc_stats.new_books + 1}}
 
-          Enum.reduce(books, {provider_module, stats}, fn book_data, {mod, acc_stats} ->
-            case sync_book(book_data, first_user) do
-              {:ok, :new} ->
-                {mod, %{acc_stats | new_books: acc_stats.new_books + 1}}
+            {:ok, :existing} ->
+              {mod, acc_stats}
 
-              {:ok, :existing} ->
-                {mod, acc_stats}
-
-              {:error, reason} ->
-                error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
-                Logger.error(error_msg)
-                {mod, %{acc_stats | errors: [error_msg | acc_stats.errors]}}
-            end
-          end)
-        end
+            {:error, reason} ->
+              error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
+              Logger.error(error_msg)
+              {mod, %{acc_stats | errors: [error_msg | acc_stats.errors]}}
+          end
+        end)
 
       {:error, reason} ->
         error_msg = "Failed to fetch books from #{provider_module.provider_name()}: #{reason}"
@@ -96,7 +86,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
     end
   end
 
-  defp sync_book(book_data, user) do
+  defp sync_book(book_data) do
     # Try to find existing book by ISBN or title/author
     existing_book = find_existing_book(book_data)
 
@@ -105,11 +95,11 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         # Create new book
         case create_book_from_sync_data(book_data) do
           {:ok, book} ->
-            # Add to user's collection with the media type from sync data
+            # Add to collection with the media type from sync data
             case Collections.add_to_collection(book, book_data.media_type) do
               {:ok, _collection_item} ->
                 Logger.debug(
-                  "Added new book '#{book.title}' to #{user.email}'s collection as #{book_data.media_type}"
+                  "Added new book '#{book.title}' to collection as #{book_data.media_type}"
                 )
 
                 {:ok, :new}
@@ -137,7 +127,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
           case Collections.add_to_collection(updated_book, book_data.media_type) do
             {:ok, _collection_item} ->
               Logger.debug(
-                "Added existing book '#{updated_book.title}' to #{user.email}'s collection as #{book_data.media_type}"
+                "Added existing book '#{updated_book.title}' to collection as #{book_data.media_type}"
               )
 
               {:ok, :existing}
@@ -196,10 +186,6 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
     }
 
     Catalog.create_book(attrs)
-  end
-
-  defp get_first_user do
-    Repo.one(from u in User, limit: 1)
   end
 
   defp get_available_providers do

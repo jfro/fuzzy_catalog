@@ -119,16 +119,72 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   defp fetch_library_items(library, base_url, api_key) do
     library_id = library["id"]
     library_media_type = library["mediaType"]
+
+    Logger.debug(
+      "Fetching all library items for library #{library["name"]} (mediaType: #{library_media_type})"
+    )
+
+    try do
+      items_stream = stream_library_items(library_id, base_url, api_key)
+
+      books =
+        items_stream
+        |> Stream.map(&transform_item_to_book(&1, library_media_type))
+        |> Enum.to_list()
+
+      Logger.debug("Successfully fetched #{length(books)} items from library #{library["name"]}")
+
+      {:ok, books}
+    rescue
+      error ->
+        Logger.error("Failed to fetch library items: #{inspect(error)}")
+        {:error, "Failed to fetch library items: #{inspect(error)}"}
+    end
+  end
+
+  defp stream_library_items(library_id, base_url, api_key) do
+    Stream.resource(
+      fn -> {0, nil, false} end,
+      fn
+        {_page, _total, true} ->
+          {:halt, nil}
+
+        {page, total, false} ->
+          case fetch_page(library_id, base_url, api_key, page) do
+            {:ok, items, response_total} ->
+              new_total = total || response_total
+              fetched_so_far = (page + 1) * 1000
+              is_done = fetched_so_far >= new_total or length(items) < 1000
+
+              if is_done do
+                Logger.debug("Completed fetching all items from library")
+              else
+                Logger.debug(
+                  "Fetched page #{page}, continuing to page #{page + 1} (#{fetched_so_far}/#{new_total} items)"
+                )
+              end
+
+              {items, {page + 1, new_total, is_done}}
+
+            {:error, reason} ->
+              throw({:fetch_error, reason})
+          end
+      end,
+      fn _ -> :ok end
+    )
+    |> Stream.flat_map(& &1)
+  end
+
+  defp fetch_page(library_id, base_url, api_key, page) do
     url = "#{base_url}/api/libraries/#{library_id}/items"
     headers = [{"Authorization", "Bearer #{api_key}"}]
-    params = [limit: 1000, page: 0]
+    params = [limit: 1000, page: page]
 
-    Logger.debug("Fetching library items from #{url} (mediaType: #{library_media_type})")
+    Logger.debug("Fetching library items page #{page} from #{url}")
 
     case Req.get(url, headers: headers, params: params) do
-      {:ok, %{status: 200, body: %{"results" => items}}} ->
-        books = Enum.map(items, &transform_item_to_book(&1, library_media_type))
-        {:ok, books}
+      {:ok, %{status: 200, body: %{"results" => items, "total" => total}}} ->
+        {:ok, items, total}
 
       {:ok, %{status: status, body: body}} ->
         Logger.error("Failed to fetch library items: HTTP #{status} - #{inspect(body)}")
