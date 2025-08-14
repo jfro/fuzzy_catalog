@@ -40,39 +40,68 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   end
 
   @doc """
-  Synchronize books from a specific provider.
+  Synchronize books from a specific provider using streaming for efficient memory usage.
   """
   def sync_provider(provider_module) do
     Logger.info("Syncing books from #{provider_module.provider_name()}")
 
-    case provider_module.fetch_books() do
-      {:ok, books} ->
+    case get_books_stream(provider_module) do
+      {:ok, books_stream} ->
+        Logger.info("Starting streaming sync from #{provider_module.provider_name()}")
+
         stats = %{
           provider: provider_module.provider_name(),
-          total_books: length(books),
+          total_books: 0,
           new_books: 0,
           errors: []
         }
 
-        Logger.info("Found #{length(books)} books from #{provider_module.provider_name()}")
+        final_stats =
+          books_stream
+          |> Stream.with_index(1)
+          |> Enum.reduce(stats, fn {book_data, index}, acc_stats ->
+            # Log progress every 100 books
+            if rem(index, 100) == 0 do
+              Logger.info(
+                "Processed #{index} books from #{provider_module.provider_name()} " <>
+                  "(#{acc_stats.new_books} new, #{length(acc_stats.errors)} errors)"
+              )
+            end
 
-        Enum.reduce(books, {provider_module, stats}, fn book_data, {mod, acc_stats} ->
-          case sync_book(book_data) do
-            {:ok, :new} ->
-              {mod, %{acc_stats | new_books: acc_stats.new_books + 1}}
+            case sync_book(book_data) do
+              {:ok, :new} ->
+                %{
+                  acc_stats
+                  | total_books: acc_stats.total_books + 1,
+                    new_books: acc_stats.new_books + 1
+                }
 
-            {:ok, :existing} ->
-              {mod, acc_stats}
+              {:ok, :existing} ->
+                %{acc_stats | total_books: acc_stats.total_books + 1}
 
-            {:error, reason} ->
-              error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
-              Logger.error(error_msg)
-              {mod, %{acc_stats | errors: [error_msg | acc_stats.errors]}}
-          end
-        end)
+              {:error, reason} ->
+                error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
+                Logger.error(error_msg)
+
+                %{
+                  acc_stats
+                  | total_books: acc_stats.total_books + 1,
+                    errors: [error_msg | acc_stats.errors]
+                }
+            end
+          end)
+
+        Logger.info(
+          "Completed sync from #{provider_module.provider_name()}: " <>
+            "#{final_stats.new_books}/#{final_stats.total_books} new books added"
+        )
+
+        {provider_module, final_stats}
 
       {:error, reason} ->
-        error_msg = "Failed to fetch books from #{provider_module.provider_name()}: #{reason}"
+        error_msg =
+          "Failed to get books stream from #{provider_module.provider_name()}: #{reason}"
+
         Logger.error(error_msg)
 
         stats = %{
@@ -83,6 +112,20 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         }
 
         {provider_module, stats}
+    end
+  end
+
+  defp get_books_stream(provider_module) do
+    if function_exported?(provider_module, :stream_books, 0) do
+      Logger.debug("Using streaming API for #{provider_module.provider_name()}")
+      provider_module.stream_books()
+    else
+      Logger.debug("Falling back to fetch_books for #{provider_module.provider_name()}")
+
+      case provider_module.fetch_books() do
+        {:ok, books} -> {:ok, Stream.map(books, & &1)}
+        error -> error
+      end
     end
   end
 

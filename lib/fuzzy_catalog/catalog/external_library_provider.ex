@@ -26,11 +26,20 @@ defmodule FuzzyCatalog.Catalog.ExternalLibraryProvider do
         }
 
   @type sync_result :: {:ok, [book_sync_data()]} | {:error, String.t()}
+  @type stream_result :: {:ok, Enumerable.t()} | {:error, String.t()}
 
   @doc """
   Fetch all books from the external library.
   """
   @callback fetch_books() :: sync_result()
+
+  @doc """
+  Stream books from the external library for efficient memory usage.
+  Providers that don't implement this will fall back to fetch_books/0.
+  """
+  @callback stream_books() :: stream_result()
+
+  @optional_callbacks stream_books: 0
 
   @doc """
   Provider name for logging and identification.

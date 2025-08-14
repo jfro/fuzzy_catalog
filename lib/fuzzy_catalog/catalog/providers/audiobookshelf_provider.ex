@@ -27,13 +27,27 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
 
   @impl true
   def fetch_books do
+    case stream_books() do
+      {:ok, book_stream} ->
+        {:ok, Enum.to_list(book_stream)}
+
+      error ->
+        error
+    end
+  end
+
+  @impl true
+  def stream_books do
     case get_config() do
       {:ok, {base_url, api_key, library_filter}} ->
-        fetch_libraries(base_url, api_key)
-        |> case do
+        case fetch_libraries(base_url, api_key) do
           {:ok, libraries} ->
             filtered_libraries = filter_libraries(libraries, library_filter)
-            fetch_books_from_libraries(filtered_libraries, base_url, api_key)
+            names = Enum.map(filtered_libraries, &Map.get(&1, "name"))
+            Logger.debug("Filtered libraries: #{inspect(names)}, preparing book stream")
+
+            stream = create_books_stream(filtered_libraries, base_url, api_key)
+            {:ok, stream}
 
           error ->
             error
@@ -96,50 +110,27 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
     end)
   end
 
-  defp fetch_books_from_libraries(libraries, base_url, api_key) do
+  defp create_books_stream(libraries, base_url, api_key) do
     libraries
-    |> Enum.reduce({:ok, []}, fn library, acc ->
-      case acc do
-        {:ok, books_acc} ->
-          case fetch_library_items(library, base_url, api_key) do
-            {:ok, library_books} ->
-              {:ok, books_acc ++ library_books}
-
-            {:error, reason} ->
-              Logger.warning("Failed to fetch books from library #{library["name"]}: #{reason}")
-              {:ok, books_acc}
-          end
-
-        error ->
-          error
-      end
+    |> Stream.flat_map(fn library ->
+      create_library_items_stream(library, base_url, api_key)
     end)
   end
 
-  defp fetch_library_items(library, base_url, api_key) do
+  defp create_library_items_stream(library, base_url, api_key) do
     library_id = library["id"]
     library_media_type = library["mediaType"]
 
     Logger.debug(
-      "Fetching all library items for library #{library["name"]} (mediaType: #{library_media_type})"
+      "Creating stream for library #{library["name"]} (mediaType: #{library_media_type})"
     )
 
-    try do
-      items_stream = stream_library_items(library_id, base_url, api_key)
-
-      books =
-        items_stream
-        |> Stream.map(&transform_item_to_book(&1, library_media_type))
-        |> Enum.to_list()
-
-      Logger.debug("Successfully fetched #{length(books)} items from library #{library["name"]}")
-
-      {:ok, books}
-    rescue
-      error ->
-        Logger.error("Failed to fetch library items: #{inspect(error)}")
-        {:error, "Failed to fetch library items: #{inspect(error)}"}
-    end
+    stream_library_items(library_id, base_url, api_key)
+    |> Stream.map(&transform_item_to_book(&1, library_media_type))
+  rescue
+    error ->
+      Logger.error("Failed to create library items stream: #{inspect(error)}")
+      []
   end
 
   defp stream_library_items(library_id, base_url, api_key) do
@@ -172,7 +163,6 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
       end,
       fn _ -> :ok end
     )
-    |> Stream.flat_map(& &1)
   end
 
   defp fetch_page(library_id, base_url, api_key, page) do
@@ -183,8 +173,13 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
     Logger.debug("Fetching library items page #{page} from #{url}")
 
     case Req.get(url, headers: headers, params: params) do
-      {:ok, %{status: 200, body: %{"results" => items, "total" => total}}} ->
+      {:ok, %{status: 200, body: %{"results" => items, "total" => total}}} when is_list(items) ->
+        Logger.debug("Fetched page #{page}: #{length(items)} items")
         {:ok, items, total}
+
+      {:ok, %{status: 200, body: body}} ->
+        Logger.error("Unexpected response structure: #{inspect(body)}")
+        {:error, "Unexpected response structure: expected results to be a list"}
 
       {:ok, %{status: status, body: body}} ->
         Logger.error("Failed to fetch library items: HTTP #{status} - #{inspect(body)}")
@@ -197,60 +192,108 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   end
 
   defp transform_item_to_book(item, library_media_type) do
-    media = item["media"]
-    metadata = media["metadata"] || %{}
+    # Add debug logging to understand the structure
+    if not is_map(item) do
+      Logger.error("Expected item to be a map but got: #{inspect(item)}")
+      # Return a minimal book structure to avoid crashing
+      %{
+        title: "Invalid Item",
+        author: "Unknown",
+        isbn10: nil,
+        isbn13: nil,
+        publisher: nil,
+        publication_date: nil,
+        pages: nil,
+        cover_url: nil,
+        subtitle: nil,
+        description: "Item structure was invalid: #{inspect(item)}",
+        genre: nil,
+        series: nil,
+        series_number: nil,
+        original_title: nil,
+        media_type: map_audiobookshelf_media_type(library_media_type),
+        external_id: "invalid-#{:os.system_time(:millisecond)}"
+      }
+    else
 
-    # Get cover URL - Audiobookshelf provides cover path
-    cover_url = build_cover_url(item)
+      media = Map.get(item, "media")
+      if not is_map(media) do
+        Logger.error("Expected media to be a map but got: #{inspect(media)} for item: #{inspect(item)}")
+        # Return a minimal book structure
+        %{
+          title: Map.get(item, "name", "Unknown Title"),
+          author: "Unknown",
+          isbn10: nil,
+          isbn13: nil,
+          publisher: nil,
+          publication_date: nil,
+          pages: nil,
+          cover_url: build_cover_url(item),
+          subtitle: nil,
+          description: "Media structure was invalid",
+          genre: nil,
+          series: nil,
+          series_number: nil,
+          original_title: nil,
+          media_type: map_audiobookshelf_media_type(library_media_type),
+          external_id: Map.get(item, "id", "unknown-#{:os.system_time(:millisecond)}")
+        }
+      else
+        metadata = Map.get(media, "metadata", %{})
 
-    # Parse publication date
-    publication_date =
-      case metadata["publishedYear"] do
-        year when is_integer(year) and year > 0 ->
-          Date.new(year, 1, 1)
-          |> case do
-            {:ok, date} -> date
-            _ -> nil
+        # Get cover URL - Audiobookshelf provides cover path
+        cover_url = build_cover_url(item)
+
+        # Parse publication date
+        publication_date =
+          case metadata["publishedYear"] do
+            year when is_integer(year) and year > 0 ->
+              Date.new(year, 1, 1)
+              |> case do
+                {:ok, date} -> date
+                _ -> nil
+              end
+
+            _ ->
+              nil
           end
 
-        _ ->
-          nil
-      end
+        # Parse series number
+        series_number =
+          case metadata["seriesSequence"] do
+            sequence when is_binary(sequence) ->
+              case Integer.parse(sequence) do
+                {num, _} -> num
+                :error -> nil
+              end
 
-    # Parse series number
-    series_number =
-      case metadata["seriesSequence"] do
-        sequence when is_binary(sequence) ->
-          case Integer.parse(sequence) do
-            {num, _} -> num
-            :error -> nil
+            sequence when is_integer(sequence) ->
+              sequence
+
+            _ ->
+              nil
           end
 
-        sequence when is_integer(sequence) ->
-          sequence
-
-        _ ->
-          nil
+        %{
+          title: metadata["title"] || "Unknown Title",
+          author: metadata["authorName"] || "Unknown Author",
+          isbn10: metadata["isbn"],
+          isbn13: metadata["asin"],
+          publisher: metadata["publisher"],
+          publication_date: publication_date,
+          pages: nil,
+          cover_url: cover_url,
+          subtitle: metadata["subtitle"],
+          description: metadata["description"],
+          genre: format_genres(metadata["genres"] || []),
+          series: format_series(metadata["series"] || []),
+          series_number: series_number,
+          original_title: nil,
+          media_type: map_audiobookshelf_media_type(library_media_type),
+          external_id: item["id"]
+        }
       end
-
-    %{
-      title: metadata["title"] || "Unknown Title",
-      author: metadata["authorName"] || "Unknown Author",
-      isbn10: metadata["isbn"],
-      isbn13: metadata["asin"],
-      publisher: metadata["publisher"],
-      publication_date: publication_date,
-      pages: nil,
-      cover_url: cover_url,
-      subtitle: metadata["subtitle"],
-      description: metadata["description"],
-      genre: format_genres(metadata["genres"] || []),
-      series: format_series(metadata["series"] || []),
-      series_number: series_number,
-      original_title: nil,
-      media_type: map_audiobookshelf_media_type(library_media_type),
-      external_id: item["id"]
-    }
+    end
   end
 
   # Map Audiobookshelf media types to our collection item media types
