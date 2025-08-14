@@ -11,31 +11,32 @@
         <div class="flex items-center gap-3">
           <.icon name="hero-computer-desktop" class="h-8 w-8 text-primary" />
           <div>
-            <h3 class="card-title">Batch Scanner Ready</h3>
+            <h3 class="card-title">Batch Scanner</h3>
             <p class="text-sm text-base-content/70">
-              Physical barcode scanner mode - ready to scan multiple books
+              Automatic barcode detection - just scan any book
             </p>
           </div>
         </div>
-        <div class="badge badge-success" id="scanner-status">Ready</div>
+        <div class="flex items-center gap-2">
+          <div class="badge badge-success" id="scanner-status">
+            <.icon name="hero-radio" class="h-3 w-3 mr-1" /> Scanner Ready
+          </div>
+          <div class="tooltip tooltip-left" data-tip="Scanner will automatically detect barcodes">
+            <.icon name="hero-information-circle" class="h-4 w-4 text-base-content/50" />
+          </div>
+        </div>
       </div>
       
 <!-- Scanner Input -->
       <div class="space-y-4">
-        <div class="form-control w-full">
-          <label class="label">
-            <span class="label-text font-medium">Barcode Scanner Input</span>
-            <span class="label-text-alt text-xs">Auto-focus enabled</span>
-          </label>
-          <input
-            type="text"
-            id="batch-scanner-input"
-            class="input input-bordered input-lg w-full text-center font-mono"
-            placeholder="Ready to scan - focus here and scan barcode..."
-            autocomplete="off"
-            autofocus
-          />
-        </div>
+        <!-- Hidden input for compatibility -->
+        <input
+          type="text"
+          id="batch-scanner-input"
+          class="sr-only"
+          autocomplete="off"
+          tabindex="-1"
+        />
         
 <!-- Media Type Selection -->
         <div class="form-control w-full">
@@ -60,13 +61,6 @@
             onclick="clearBatch()"
           >
             <.icon name="hero-trash" class="h-4 w-4 mr-2" /> Clear Batch
-          </button>
-          <button
-            id="focus-scanner-btn"
-            class="btn btn-outline"
-            onclick="focusScanner()"
-          >
-            <.icon name="hero-cursor-arrow-rays" class="h-4 w-4 mr-2" /> Focus Scanner
           </button>
         </div>
       </div>
@@ -145,19 +139,23 @@
 
   function updateScannerStatus(status, isProcessing = false) {
     const statusEl = document.getElementById('scanner-status');
-    const inputEl = document.getElementById('batch-scanner-input');
-    
-    statusEl.textContent = status;
-    statusEl.className = isProcessing ? 'badge badge-warning' : 'badge badge-success';
     
     if (isProcessing) {
-      inputEl.placeholder = 'Processing...';
-      inputEl.disabled = true;
+      statusEl.innerHTML = `
+        <svg class="h-3 w-3 mr-1 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+        </svg>
+        ${status}
+      `;
+      statusEl.className = 'badge badge-warning';
     } else {
-      inputEl.placeholder = 'Ready to scan - focus here and scan barcode...';
-      inputEl.disabled = false;
-      inputEl.value = '';
-      setTimeout(() => inputEl.focus(), 100);
+      statusEl.innerHTML = `
+        <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+        </svg>
+        ${status}
+      `;
+      statusEl.className = 'badge badge-success';
     }
   }
 
@@ -251,10 +249,14 @@
   }
 
   async function processBarcode(barcode) {
+    if (isProcessing) return;
+    
+    isProcessing = true;
     const mediaType = document.getElementById('default-media-type').value;
     const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
     
     updateScannerStatus('Processing...', true);
+    showToast(`Scanning barcode: ${barcode}`, 'info');
     
     try {
       // First check if book exists
@@ -272,13 +274,17 @@
       if (checkData.exists) {
         // Book already exists
         addResultItem('exists', checkData);
-        updateScannerStatus('Ready');
+        showToast(`"${checkData.book.title}" already in library`, 'warning');
+        updateScannerStatus('Scanner Ready');
+        isProcessing = false;
         return;
       }
       
       if (checkData.error) {
         addResultItem('error', { error: checkData.error, isbn: checkData.isbn });
-        updateScannerStatus('Ready');
+        showToast(`Error: ${checkData.error}`, 'error');
+        updateScannerStatus('Scanner Ready');
+        isProcessing = false;
         return;
       }
       
@@ -296,23 +302,26 @@
       
       if (addData.success) {
         addResultItem('added', addData);
+        showToast(`Added "${addData.book.title}" to library!`, 'success');
       } else {
         addResultItem('error', { error: addData.error, isbn: checkData.isbn });
+        showToast(`Error: ${addData.error}`, 'error');
       }
       
     } catch (error) {
       console.error('Network error:', error);
       addResultItem('error', { error: 'Network error occurred', isbn: null });
+      showToast('Network error occurred', 'error');
     }
     
-    updateScannerStatus('Ready');
+    updateScannerStatus('Scanner Ready');
+    isProcessing = false;
   }
 
-  function focusScanner() {
-    const input = document.getElementById('batch-scanner-input');
-    input.focus();
-    input.select();
-  }
+  // Barcode scanner state
+  let barcodeBuffer = '';
+  let lastKeystroke = 0;
+  let isProcessing = false;
 
   function clearBatch() {
     if (batchResults.length === 0) return;
@@ -333,59 +342,120 @@
       `;
       
       updateCounters();
-      focusScanner();
+      updateScannerStatus('Scanner Ready');
     }
   }
 
-  // Setup scanner input handling
+  function showToast(message, type = 'info') {
+    // Create toast element
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type} fixed top-4 right-4 z-50 max-w-sm animate-in slide-in-from-right duration-300`;
+    toast.innerHTML = `
+      <div class="flex items-center gap-2">
+        ${type === 'success' ? 
+          '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' :
+          type === 'error' ?
+          '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>' :
+          '<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+        }
+        <span>${message}</span>
+      </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove after 4 seconds
+    setTimeout(() => {
+      toast.classList.add('animate-out', 'slide-out-to-right');
+      setTimeout(() => toast.remove(), 300);
+    }, 4000);
+  }
+
+  function isScannerInput(timeBetweenKeys) {
+    // Scanner typically types 10-20 characters in under 100ms
+    // Human typing is usually 200ms+ between keystrokes
+    return timeBetweenKeys < 100;
+  }
+
+  function processBarcodeFromBuffer() {
+    const barcode = barcodeBuffer.trim();
+    if (barcode.length >= 8) { // Minimum viable barcode length
+      barcodeBuffer = '';
+      processBarcode(barcode);
+    }
+  }
+
+  // Setup global keyboard listener for barcode detection
   function setupBatchScanner() {
-    const scannerInput = document.getElementById('batch-scanner-input');
-    
-    if (!scannerInput) return;
-    
-    // Handle barcode input
-    scannerInput.addEventListener('keydown', function(e) {
+    // Global keydown listener
+    document.addEventListener('keydown', function(e) {
+      // Ignore if processing or typing in inputs/textareas
+      if (isProcessing || 
+          e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'TEXTAREA' || 
+          e.target.tagName === 'SELECT' ||
+          e.target.isContentEditable) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      const timeBetweenKeys = currentTime - lastKeystroke;
+      lastKeystroke = currentTime;
+
+      // Handle Enter key - process buffer if it looks like a barcode
       if (e.key === 'Enter') {
         e.preventDefault();
-        const barcode = this.value.trim();
+        if (barcodeBuffer.length >= 8) {
+          processBarcodeFromBuffer();
+        }
+        return;
+      }
+
+      // Handle regular characters
+      if (e.key.length === 1) {
+        e.preventDefault(); // Prevent normal typing behavior
         
-        if (barcode.length > 0) {
-          processBarcode(barcode);
+        // If too much time has passed, reset buffer (new scan)
+        if (timeBetweenKeys > 200) {
+          barcodeBuffer = '';
+        }
+
+        // Add character to buffer
+        barcodeBuffer += e.key;
+
+        // Auto-process if scanner input detected and buffer looks complete
+        if (isScannerInput(timeBetweenKeys) && barcodeBuffer.length >= 10) {
+          // Set a short timeout to catch any remaining characters
+          setTimeout(() => {
+            if (barcodeBuffer.length >= 8) {
+              processBarcodeFromBuffer();
+            }
+          }, 50);
+        }
+
+        // Show visual feedback for scanner activity
+        if (barcodeBuffer.length > 3) {
+          updateScannerStatus(`Scanning... (${barcodeBuffer.length} chars)`, false);
         }
       }
-    });
-    
-    // Auto-select text when focused
-    scannerInput.addEventListener('focus', function() {
-      this.select();
-    });
-    
-    // Re-focus when clicked
-    scannerInput.addEventListener('click', function() {
-      this.focus();
-      this.select();
-    });
-    
-    // Keep focus on input for continuous scanning
-    document.addEventListener('click', function(e) {
-      // Don't refocus if clicking on dropdown menus or buttons
-      if (!e.target.closest('.dropdown') && !e.target.closest('button') && 
-          !e.target.closest('a') && !e.target.closest('select')) {
-        if (!scannerInput.disabled) {
-          scannerInput.focus();
+
+      // Clear buffer after timeout (in case scan is incomplete)
+      setTimeout(() => {
+        if (barcodeBuffer && Date.now() - lastKeystroke > 500) {
+          if (barcodeBuffer.length >= 8) {
+            processBarcodeFromBuffer();
+          } else {
+            barcodeBuffer = '';
+            updateScannerStatus('Scanner Ready');
+          }
         }
-      }
+      }, 600);
     });
   }
 
   // Initialize when page loads
   document.addEventListener('DOMContentLoaded', function() {
     setupBatchScanner();
-    focusScanner();
-  });
-
-  // Cleanup and refocus when returning to page
-  window.addEventListener('focus', function() {
-    setTimeout(focusScanner, 100);
+    updateScannerStatus('Scanner Ready');
   });
 </script>

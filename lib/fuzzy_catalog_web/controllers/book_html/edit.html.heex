@@ -35,18 +35,64 @@
         <% end %>
 
         <div class="space-y-4">
-          <.input field={f[:title]} type="text" label="Title" required />
-          <.input field={f[:author]} type="text" label="Author" required />
-          <.input field={f[:upc]} type="text" label="UPC" />
-          <.input field={f[:isbn10]} type="text" label="ISBN-10" />
-          <.input field={f[:isbn13]} type="text" label="ISBN-13" />
-          <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
-          <.input
-            field={f[:cover_url]}
-            type="url"
-            label="Cover Image URL (optional)"
-            placeholder="https://example.com/cover.jpg"
-          />
+          <!-- Basic Information -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Basic Information</h3>
+            <div class="space-y-4">
+              <.input field={f[:title]} type="text" label="Title" required />
+              <.input field={f[:author]} type="text" label="Author" required />
+              <.input field={f[:subtitle]} type="text" label="Subtitle" />
+              <.input field={f[:original_title]} type="text" label="Original Title" />
+            </div>
+          </div>
+          
+<!-- Identifiers -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Identifiers</h3>
+            <div class="space-y-4">
+              <.input field={f[:isbn13]} type="text" label="ISBN-13" />
+              <.input field={f[:isbn10]} type="text" label="ISBN-10" />
+              <.input field={f[:upc]} type="text" label="UPC" />
+              <.input field={f[:amazon_asin]} type="text" label="Amazon ASIN" />
+            </div>
+          </div>
+          
+<!-- Publishing Information -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Publishing Information</h3>
+            <div class="space-y-4">
+              <.input field={f[:publisher]} type="text" label="Publisher" />
+              <.input field={f[:publication_date]} type="date" label="Publication Date" />
+              <.input field={f[:pages]} type="number" label="Pages" />
+              <.input field={f[:genre]} type="text" label="Genre" />
+            </div>
+          </div>
+          
+<!-- Series Information -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Series Information</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <.input field={f[:series]} type="text" label="Series" />
+              <.input field={f[:series_number]} type="number" label="Series Number" />
+            </div>
+          </div>
+          
+<!-- Description -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Description</h3>
+            <.input field={f[:description]} type="textarea" label="Description" rows="6" />
+          </div>
+          
+<!-- Media -->
+          <div class="bg-base-100 rounded-lg p-4 border">
+            <h3 class="text-lg font-semibold mb-3">Media</h3>
+            <.input
+              field={f[:cover_url]}
+              type="url"
+              label="Cover Image URL (optional)"
+              placeholder="https://example.com/cover.jpg"
+            />
+          </div>
         </div>
 
         <div class="mt-6 flex gap-3">
