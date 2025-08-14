@@ -7,7 +7,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   """
 
   require Logger
-  alias FuzzyCatalog.{Catalog, Collections}
+  alias FuzzyCatalog.{Catalog, Collections, Storage}
 
   @doc """
   Synchronize books from all available external library providers.
@@ -219,7 +219,6 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
       publisher: book_data.publisher,
       publication_date: book_data.publication_date,
       pages: book_data.pages,
-      cover_url: book_data.cover_url,
       subtitle: book_data.subtitle,
       description: book_data.description,
       genre: book_data.genre,
@@ -228,7 +227,10 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
       original_title: book_data.original_title
     }
 
-    Catalog.create_book(attrs)
+    # Download and store cover if available
+    attrs_with_cover = download_cover_for_sync(attrs, book_data)
+
+    Catalog.create_book(attrs_with_cover)
   end
 
   defp get_available_providers do
@@ -240,19 +242,44 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
 
   defp maybe_update_cover(book, book_data) do
     # Only update cover if book doesn't have one and sync data provides one
-    if (is_nil(book.cover_url) or book.cover_url == "") and
+    if (is_nil(book.cover_image_key) or book.cover_image_key == "") and
          not is_nil(book_data.cover_url) and book_data.cover_url != "" do
-      case Catalog.update_book(book, %{cover_url: book_data.cover_url}) do
-        {:ok, updated_book} ->
-          Logger.debug("Updated cover for existing book '#{book.title}'")
-          updated_book
+      case Storage.download_and_store_cover(book_data.cover_url) do
+        {:ok, storage_key} ->
+          case Catalog.update_book(book, %{cover_image_key: storage_key}) do
+            {:ok, updated_book} ->
+              Logger.debug("Downloaded and updated cover for existing book '#{book.title}'")
+              updated_book
 
-        {:error, _changeset} ->
-          Logger.warning("Failed to update cover for book '#{book.title}'")
+            {:error, _changeset} ->
+              Logger.warning("Failed to update cover for book '#{book.title}'")
+              # Clean up the downloaded cover since we couldn't save it
+              Storage.delete_cover(storage_key)
+              book
+          end
+
+        {:error, reason} ->
+          Logger.debug("Failed to download cover for book '#{book.title}': #{reason}")
           book
       end
     else
       book
+    end
+  end
+
+  defp download_cover_for_sync(attrs, book_data) do
+    if not is_nil(book_data.cover_url) and book_data.cover_url != "" do
+      case Storage.download_and_store_cover(book_data.cover_url) do
+        {:ok, storage_key} ->
+          Logger.debug("Downloaded cover for '#{book_data.title}' from external library")
+          Map.put(attrs, :cover_image_key, storage_key)
+
+        {:error, reason} ->
+          Logger.debug("Failed to download cover for '#{book_data.title}': #{reason}")
+          attrs
+      end
+    else
+      attrs
     end
   end
 
