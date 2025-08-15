@@ -65,6 +65,25 @@ defmodule FuzzyCatalog.Catalog do
   end
 
   @doc """
+  Creates a book without automatically adding to collection.
+  Used by external sync processes that handle collection management separately.
+
+  ## Examples
+
+      iex> create_book_without_collection(%{field: value})
+      {:ok, %Book{}}
+
+      iex> create_book_without_collection(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_book_without_collection(attrs \\ %{}) do
+    %Book{}
+    |> Book.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
   Updates a book.
 
   ## Examples

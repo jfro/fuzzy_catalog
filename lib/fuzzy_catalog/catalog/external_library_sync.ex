@@ -255,7 +255,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
     # Download and store cover if available
     attrs_with_cover = download_cover_for_sync(attrs, book_data)
 
-    Catalog.create_book(attrs_with_cover)
+    Catalog.create_book_without_collection(attrs_with_cover)
   end
 
   defp get_available_providers do
