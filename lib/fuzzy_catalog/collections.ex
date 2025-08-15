@@ -287,6 +287,12 @@ defmodule FuzzyCatalog.Collections do
 
   """
   def list_library_books(params \\ %{}) do
+    # Extract search parameters
+    search_term = get_search_term(params)
+
+    # Remove search from Flop params to avoid validation issues
+    flop_params = remove_search_param(params)
+
     base_query =
       from b in Book,
         join: ci in CollectionItem,
@@ -294,7 +300,15 @@ defmodule FuzzyCatalog.Collections do
         group_by: [b.id],
         select: {b, fragment("array_agg(? ORDER BY ?)::text[]", ci.media_type, ci.media_type)}
 
-    case Flop.validate_and_run(base_query, params, for: Book) do
+    # Apply search filter if present
+    query_with_search =
+      if search_term && String.trim(search_term) != "" do
+        apply_search_filter(base_query, search_term)
+      else
+        base_query
+      end
+
+    case Flop.validate_and_run(query_with_search, flop_params, for: Book) do
       {:ok, {books_with_media_types, meta}} ->
         books =
           books_with_media_types
@@ -302,10 +316,50 @@ defmodule FuzzyCatalog.Collections do
             Map.put(book, :media_types, media_types)
           end)
 
-        {books, meta}
+        # Add search filter back to meta for UI display
+        meta_with_search = add_search_to_meta(meta, search_term)
+        {books, meta_with_search}
 
       {:error, %Flop{} = flop} ->
-        {[], Flop.meta(flop, [])}
+        meta_with_search = add_search_to_meta(Flop.meta(flop, []), search_term)
+        {[], meta_with_search}
     end
   end
+
+  defp get_search_term(%{"filters" => %{"search" => search_term}}) when is_binary(search_term),
+    do: search_term
+
+  defp get_search_term(_), do: nil
+
+  defp remove_search_param(%{"filters" => filters} = params) do
+    updated_filters = Map.delete(filters, "search")
+
+    if updated_filters == %{} do
+      Map.delete(params, "filters")
+    else
+      Map.put(params, "filters", updated_filters)
+    end
+  end
+
+  defp remove_search_param(params), do: params
+
+  defp apply_search_filter(query, search_term) do
+    import Ecto.Query
+    search_pattern = "%#{search_term}%"
+
+    from b in query,
+      where:
+        ilike(b.title, ^search_pattern) or
+          ilike(b.author, ^search_pattern) or
+          ilike(b.series, ^search_pattern)
+  end
+
+  defp add_search_to_meta(%Flop.Meta{} = meta, search_term)
+       when is_binary(search_term) and search_term != "" do
+    search_filter = %Flop.Filter{field: :search, op: :ilike, value: search_term}
+    updated_flop = %{meta.flop | filters: [search_filter | meta.flop.filters]}
+    %{meta | flop: updated_flop}
+  end
+
+  defp add_search_to_meta(meta, _), do: meta
 end
