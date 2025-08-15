@@ -70,6 +70,12 @@ defmodule FuzzyCatalogWeb.Router do
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
   end
 
+  scope "/admin", FuzzyCatalogWeb do
+    pipe_through [:browser, :require_authenticated_user]
+
+    live "/", AdminLive, :index
+  end
+
   scope "/", FuzzyCatalogWeb do
     pipe_through [:browser]
 

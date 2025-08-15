@@ -1,0 +1,229 @@
+<div id="admin-live-view">
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-base-content">Admin - External Library Sync</h1>
+    <p class="mt-2 text-base-content/70">
+      Manage and monitor external library provider synchronization
+    </p>
+  </div>
+
+  <div class="mb-6 space-x-4">
+    <button
+      phx-click="refresh_all"
+      disabled={
+        @syncing_all or Enum.any?(@providers, fn p -> p.sync_status.status == :syncing end)
+      }
+      class="btn btn-primary"
+    >
+      <%= if @syncing_all or Enum.any?(@providers, fn p -> p.sync_status.status == :syncing end) do %>
+        <span class="loading loading-spinner loading-sm"></span> Syncing...
+      <% else %>
+        Refresh All Providers
+      <% end %>
+    </button>
+  </div>
+
+  <div class="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+    <%= for provider <- @providers do %>
+      <div class="card bg-base-100 shadow-xl border border-base-300">
+        <div class="card-body">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="card-title text-base-content">{provider.name}</h2>
+              <p class="text-sm text-base-content/70">{provider.description}</p>
+            </div>
+
+            <div class="flex items-center space-x-2">
+              <!-- Availability Status -->
+              <%= if provider.available do %>
+                <div class="badge badge-success gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3" />
+                  </svg>
+                  Available
+                </div>
+              <% else %>
+                <div class="badge badge-error gap-1">
+                  <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8">
+                    <circle cx="4" cy="4" r="3" />
+                  </svg>
+                  Unavailable
+                </div>
+              <% end %>
+              
+<!-- Sync Status -->
+              <%= case provider.sync_status.status do %>
+                <% :syncing -> %>
+                  <div class="badge badge-info gap-1">
+                    <span class="loading loading-spinner loading-xs"></span> Syncing
+                  </div>
+                <% :error -> %>
+                  <div class="badge badge-error gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Error
+                  </div>
+                <% _ -> %>
+                  <div class="badge badge-ghost gap-1">
+                    <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Idle
+                  </div>
+              <% end %>
+            </div>
+          </div>
+          
+<!-- Sync Progress (if syncing) -->
+          <%= if provider.sync_status.status == :syncing and Map.has_key?(provider.sync_status, :progress) do %>
+            <div class="mb-4">
+              <div class="flex justify-between text-sm text-base-content/70 mb-2">
+                <span>Sync Progress</span>
+                <span>
+                  {provider.sync_status.progress.processed_books || 0} / {provider.sync_status.progress.total_books ||
+                    0} books
+                </span>
+              </div>
+              <% progress_percent =
+                if provider.sync_status.progress.total_books > 0 do
+                  (provider.sync_status.progress.processed_books || 0) /
+                    provider.sync_status.progress.total_books * 100
+                else
+                  0
+                end %>
+              <progress class="progress progress-info w-full" value={progress_percent} max="100">
+              </progress>
+              <%= if provider.sync_status.progress.new_books do %>
+                <p class="text-xs text-base-content/60 mt-1">
+                  {provider.sync_status.progress.new_books} new books added
+                </p>
+              <% end %>
+            </div>
+          <% end %>
+          
+<!-- Last Sync Results -->
+          <%= if Map.has_key?(provider.sync_status, :last_results) do %>
+            <div class="stats stats-vertical lg:stats-horizontal shadow mb-4">
+              <div class="stat">
+                <div class="stat-title">Last Sync</div>
+                <div class="stat-value text-sm">
+                  {format_datetime(provider.sync_status.completed_at)}
+                </div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">Books Processed</div>
+                <div class="stat-value">{provider.sync_status.last_results.total_books}</div>
+              </div>
+              <div class="stat">
+                <div class="stat-title">New Books</div>
+                <div class="stat-value text-success">
+                  {provider.sync_status.last_results.new_books}
+                </div>
+              </div>
+              <%= if length(provider.sync_status.last_results.errors) > 0 do %>
+                <div class="stat">
+                  <div class="stat-title">Errors</div>
+                  <div class="stat-value text-error">
+                    {length(provider.sync_status.last_results.errors)}
+                  </div>
+                </div>
+              <% end %>
+              <%= if Map.has_key?(provider.sync_status, :started_at) do %>
+                <div class="stat">
+                  <div class="stat-title">Duration</div>
+                  <div class="stat-value text-sm">
+                    {format_duration(
+                      provider.sync_status.started_at,
+                      provider.sync_status.completed_at
+                    )}
+                  </div>
+                </div>
+              <% end %>
+            </div>
+          <% end %>
+          
+<!-- Error Display -->
+          <%= if provider.sync_status.status == :error and Map.has_key?(provider.sync_status, :error) do %>
+            <div class="alert alert-error mb-4">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="stroke-current shrink-0 h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <div>
+                <h3 class="font-bold">Sync Error</h3>
+                <div class="text-sm">{provider.sync_status.error}</div>
+              </div>
+            </div>
+          <% end %>
+          
+<!-- Action Button -->
+          <div class="card-actions justify-end">
+            <button
+              phx-click="refresh_provider"
+              phx-value-provider={provider.name}
+              disabled={not provider.available or provider.sync_status.status == :syncing}
+              class={[
+                "btn btn-sm",
+                if(provider.available and provider.sync_status.status != :syncing,
+                  do: "btn-primary",
+                  else: "btn-disabled"
+                )
+              ]}
+            >
+              <%= if provider.sync_status.status == :syncing do %>
+                <span class="loading loading-spinner loading-xs"></span> Syncing...
+              <% else %>
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Refresh
+              <% end %>
+            </button>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <%= if Enum.empty?(@providers) do %>
+    <div class="hero">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <svg
+            class="mx-auto h-16 w-16 text-base-content/30 mb-4"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2M4 13h2m-2 0l2-2m0 0l2 2M2 11l2 2"
+            />
+          </svg>
+          <h1 class="text-xl font-bold text-base-content">
+            No external library providers configured
+          </h1>
+          <p class="py-4 text-base-content/70">
+            Configure external library providers to start syncing books.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

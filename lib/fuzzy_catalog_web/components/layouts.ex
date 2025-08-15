@@ -59,6 +59,11 @@ defmodule FuzzyCatalogWeb.Layouts do
                 <.icon name="hero-plus" class="h-4 w-4 mr-1" /> Add Book
               </.link>
             </li>
+            <li>
+              <.link navigate={~p"/admin"} class="btn btn-ghost">
+                <.icon name="hero-cog-8-tooth" class="h-4 w-4 mr-1" /> Admin
+              </.link>
+            </li>
           <% end %>
           <%= if @current_scope do %>
             <li>

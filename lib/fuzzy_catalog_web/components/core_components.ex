@@ -95,7 +95,7 @@ defmodule FuzzyCatalogWeb.CoreComponents do
     variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
 
     base_classes = ["btn", Map.fetch!(variants, assigns[:variant])]
-    
+
     assigns =
       assigns
       |> assign(:class, [base_classes, assigns[:class]])

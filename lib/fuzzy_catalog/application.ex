@@ -12,6 +12,7 @@ defmodule FuzzyCatalog.Application do
       FuzzyCatalog.Repo,
       {DNSCluster, query: Application.get_env(:fuzzy_catalog, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FuzzyCatalog.PubSub},
+      FuzzyCatalog.SyncStatusManager,
       # Start a worker by calling: FuzzyCatalog.Worker.start_link(arg)
       # {FuzzyCatalog.Worker, arg},
       # Start to serve requests, typically the last entry

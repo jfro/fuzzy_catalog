@@ -7,7 +7,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   """
 
   require Logger
-  alias FuzzyCatalog.{Catalog, Collections, Storage, IsbnUtils}
+  alias FuzzyCatalog.{Catalog, Collections, Storage, IsbnUtils, SyncStatusManager}
 
   @doc """
   Synchronize books from all available external library providers.
@@ -60,7 +60,18 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
           books_stream
           |> Stream.with_index(1)
           |> Enum.reduce(stats, fn {book_data, index}, acc_stats ->
-            # Log progress every 100 books
+            # Update progress every 10 books and log progress every 100 books
+            if rem(index, 10) == 0 do
+              progress = %{
+                total_books: index,
+                processed_books: index,
+                new_books: acc_stats.new_books,
+                errors: acc_stats.errors
+              }
+
+              SyncStatusManager.update_progress(provider_module.provider_name(), progress)
+            end
+
             if rem(index, 100) == 0 do
               Logger.info(
                 "Processed #{index} books from #{provider_module.provider_name()} " <>
