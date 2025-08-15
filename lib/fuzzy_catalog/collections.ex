@@ -282,20 +282,30 @@ defmodule FuzzyCatalog.Collections do
       iex> list_library_books()
       [%Book{media_types: ["paperback", "audiobook"]}, ...]
 
+      iex> list_library_books(%{page: 1, page_size: 10})
+      {[%Book{media_types: ["paperback", "audiobook"]}, ...], %Flop.Meta{...}}
+
   """
-  def list_library_books do
-    query =
+  def list_library_books(params \\ %{}) do
+    base_query =
       from b in Book,
         join: ci in CollectionItem,
         on: ci.book_id == b.id,
         group_by: [b.id],
-        select: {b, fragment("array_agg(? ORDER BY ?)::text[]", ci.media_type, ci.media_type)},
-        order_by: [desc: b.inserted_at]
+        select: {b, fragment("array_agg(? ORDER BY ?)::text[]", ci.media_type, ci.media_type)}
 
-    query
-    |> Repo.all()
-    |> Enum.map(fn {book, media_types} ->
-      Map.put(book, :media_types, media_types)
-    end)
+    case Flop.validate_and_run(base_query, params, for: Book) do
+      {:ok, {books_with_media_types, meta}} ->
+        books =
+          books_with_media_types
+          |> Enum.map(fn {book, media_types} ->
+            Map.put(book, :media_types, media_types)
+          end)
+
+        {books, meta}
+
+      {:error, %Flop{} = flop} ->
+        {[], Flop.meta(flop, [])}
+    end
   end
 end

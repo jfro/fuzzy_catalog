@@ -9,9 +9,9 @@ defmodule FuzzyCatalogWeb.BookController do
   alias FuzzyCatalog.Collections
   alias FuzzyCatalog.Storage
 
-  def index(conn, _params) do
-    books = Collections.list_library_books()
-    render(conn, :index, books: books)
+  def index(conn, params) do
+    {books, meta} = Collections.list_library_books(params)
+    render(conn, :index, books: books, meta: meta)
   end
 
   def show(conn, %{"id" => id}) do

@@ -161,7 +161,6 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
     )
   end
 
-
   defp transform_row_to_book(row, library_path, db) do
     try do
       [

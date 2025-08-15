@@ -14,7 +14,31 @@
     </:actions>
   </.header>
 
-  <.table id="books" rows={@books}>
+  <div class="overflow-x-auto">
+    <style>
+      #books table {
+        @apply table table-zebra w-full;
+      }
+      #books thead {
+        @apply bg-base-200;
+      }
+      #books th {
+        @apply font-semibold text-base-content;
+      }
+      #books .sortable-column {
+        @apply cursor-pointer hover:bg-base-300 transition-colors;
+      }
+      #books .sortable-column:after {
+        content: " ⇅";
+        @apply text-base-content/50 ml-1;
+      }
+    </style>
+    <Flop.Phoenix.table 
+      id="books" 
+      items={@books} 
+      meta={@meta} 
+      path={~p"/books"}
+    >
     <:col :let={book} label="Cover">
       <.link navigate={~p"/books/#{book}"} class="block">
         <%= cond do %>
@@ -45,7 +69,7 @@
         <% end %>
       </.link>
     </:col>
-    <:col :let={book} label="Title & Author">
+    <:col :let={book} label="Title & Author" field={:title} col_style="cursor-pointer hover:bg-base-200">
       <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
         <div class="font-semibold">{book.title}</div>
         <div class="text-sm text-base-content/70">{book.author}</div>
@@ -72,15 +96,39 @@
       </div>
     </:col>
     <:action :let={book}>
-      <div class="sr-only">
-        <.link navigate={~p"/books/#{book}"}>Show</.link>
+      <div class="flex gap-2">
+        <.link navigate={~p"/books/#{book}/edit"} class="btn btn-sm btn-outline">
+          <.icon name="hero-pencil" class="h-4 w-4" />
+          Edit
+        </.link>
+        <.link href={~p"/books/#{book}"} method="delete" data-confirm="Are you sure?" class="btn btn-sm btn-outline btn-error">
+          <.icon name="hero-trash" class="h-4 w-4" />
+          Delete
+        </.link>
       </div>
-      <.link navigate={~p"/books/#{book}/edit"}>Edit</.link>
     </:action>
-    <:action :let={book}>
-      <.link href={~p"/books/#{book}"} method="delete" data-confirm="Are you sure?">
-        Delete
-      </.link>
-    </:action>
-  </.table>
+  </Flop.Phoenix.table>
+  </div>
+
+  <div class="mt-6 flex justify-center">
+    <Flop.Phoenix.pagination 
+      meta={@meta} 
+      path={~p"/books"}
+      page_links={5}
+      page_list_attrs={[class: "join"]}
+      page_list_item_attrs={[]}
+      page_link_attrs={[class: "join-item btn btn-outline"]}
+      current_page_link_attrs={[class: "join-item btn btn-active"]}
+      disabled_link_attrs={[class: "join-item btn btn-disabled"]}
+    >
+      <:previous attrs={[class: "join-item btn btn-outline"]}>
+        <.icon name="hero-chevron-left" class="h-4 w-4" />
+        Previous
+      </:previous>
+      <:next attrs={[class: "join-item btn btn-outline"]}>
+        Next
+        <.icon name="hero-chevron-right" class="h-4 w-4" />
+      </:next>
+    </Flop.Phoenix.pagination>
+  </div>
 </Layouts.app>

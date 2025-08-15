@@ -2,6 +2,15 @@ defmodule FuzzyCatalog.Catalog.Book do
   use Ecto.Schema
   import Ecto.Changeset
 
+  @derive {
+    Flop.Schema,
+    filterable: [:title, :author, :genre, :publisher, :series],
+    sortable: [:title, :author, :publisher, :publication_date, :inserted_at],
+    default_order: %{order_by: [:title], order_directions: [:asc]},
+    default_limit: 20,
+    max_limit: 100
+  }
+
   schema "books" do
     field :title, :string
     field :author, :string
