@@ -1,6 +1,7 @@
 defmodule FuzzyCatalog.Catalog do
   import Ecto.Query, warn: false
   alias FuzzyCatalog.Repo
+  alias FuzzyCatalog.TitleUtils
 
   alias FuzzyCatalog.Catalog.Book
 
@@ -266,18 +267,37 @@ defmodule FuzzyCatalog.Catalog do
   @doc """
   Finds a book by title and author combination.
 
+  Uses normalized title matching to handle common postfixes like "(Unabridged)",
+  "(Paperback)", etc. that don't affect the core title.
+
   ## Examples
 
       iex> find_book_by_title_and_author("The Great Book", "Famous Author")
       %Book{}
+
+      iex> find_book_by_title_and_author("The Martian (Unabridged)", "Andy Weir")
+      %Book{title: "The Martian"}
 
       iex> find_book_by_title_and_author("Nonexistent", "No Author")
       nil
 
   """
   def find_book_by_title_and_author(title, author) when is_binary(title) and is_binary(author) do
-    from(b in Book)
-    |> where([b], b.title == ^title and b.author == ^author)
-    |> Repo.one()
+    normalized_title = TitleUtils.normalize_title(title)
+
+    # First try exact match for performance
+    case from(b in Book)
+         |> where([b], b.title == ^title and b.author == ^author)
+         |> Repo.one() do
+      nil ->
+        # Fallback to normalized title matching
+        from(b in Book)
+        |> where([b], b.author == ^author)
+        |> Repo.all()
+        |> Enum.find(fn book -> TitleUtils.normalize_title(book.title) == normalized_title end)
+
+      book ->
+        book
+    end
   end
 end
