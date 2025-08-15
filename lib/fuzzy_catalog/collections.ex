@@ -320,8 +320,8 @@ defmodule FuzzyCatalog.Collections do
         meta_with_search = add_search_to_meta(meta, search_term)
         {books, meta_with_search}
 
-      {:error, %Flop{} = flop} ->
-        meta_with_search = add_search_to_meta(Flop.meta(flop, []), search_term)
+      {:error, %Flop.Meta{} = flop} ->
+        meta_with_search = add_search_to_meta(flop, search_term)
         {[], meta_with_search}
     end
   end
