@@ -94,10 +94,12 @@ defmodule FuzzyCatalogWeb.CoreComponents do
   def button(%{rest: rest} = assigns) do
     variants = %{"primary" => "btn-primary", nil => "btn-primary btn-soft"}
 
+    base_classes = ["btn", Map.fetch!(variants, assigns[:variant])]
+    
     assigns =
-      assign_new(assigns, :class, fn ->
-        ["btn", Map.fetch!(variants, assigns[:variant])]
-      end)
+      assigns
+      |> assign(:class, [base_classes, assigns[:class]])
+      |> update(:class, &Enum.filter(&1, fn x -> x != nil and x != "" end))
 
     if rest[:href] || rest[:navigate] || rest[:patch] do
       ~H"""
