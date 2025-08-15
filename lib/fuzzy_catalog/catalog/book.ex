@@ -21,7 +21,7 @@ defmodule FuzzyCatalog.Catalog.Book do
     field :subtitle, :string
     field :description, :string
     field :series, :string
-    field :series_number, :integer
+    field :series_number, :decimal
     field :original_title, :string
 
     has_many :collection_items, FuzzyCatalog.Collections.CollectionItem
