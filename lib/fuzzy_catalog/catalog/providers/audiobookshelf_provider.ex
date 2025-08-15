@@ -8,6 +8,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   @behaviour FuzzyCatalog.Catalog.ExternalLibraryProvider
 
   require Logger
+  alias FuzzyCatalog.IsbnUtils
 
   @impl true
   def provider_name, do: "Audiobookshelf"
@@ -127,6 +128,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
 
     stream_library_items(library_id, base_url, api_key)
     |> Stream.map(&transform_item_to_book(&1, library_media_type))
+    |> Stream.filter(& &1)
   rescue
     error ->
       Logger.error("Failed to create library items stream: #{inspect(error)}")
@@ -192,110 +194,69 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   end
 
   defp transform_item_to_book(item, library_media_type) do
-    # Add debug logging to understand the structure
-    if not is_map(item) do
-      Logger.error("Expected item to be a map but got: #{inspect(item)}")
-      # Return a minimal book structure to avoid crashing
+    with %{} <- item,
+         media when is_map(media) <- Map.get(item, "media") do
+      metadata = Map.get(media, "metadata", %{})
+
+      # Get cover URL - Audiobookshelf provides cover path
+      cover_url = build_cover_url(item)
+
+      # Parse publication date
+      publication_date =
+        case metadata["publishedYear"] do
+          year when is_integer(year) and year > 0 ->
+            Date.new(year, 1, 1)
+            |> case do
+              {:ok, date} -> date
+              _ -> nil
+            end
+
+          _ ->
+            nil
+        end
+
+      # Parse series number
+      series_number =
+        case metadata["seriesSequence"] do
+          sequence when is_binary(sequence) ->
+            case Integer.parse(sequence) do
+              {num, _} -> num
+              :error -> nil
+            end
+
+          sequence when is_integer(sequence) ->
+            sequence
+
+          _ ->
+            nil
+        end
+
+      # Separate ISBN and ASIN data properly
+      {isbn10, isbn13, asin} = parse_isbn_asin_data(metadata)
+
       %{
-        title: "Invalid Item",
-        author: "Unknown",
-        isbn10: nil,
-        isbn13: nil,
-        publisher: nil,
-        publication_date: nil,
+        title: metadata["title"] || "Unknown Title",
+        author: metadata["authorName"] || "Unknown Author",
+        isbn10: isbn10,
+        isbn13: isbn13,
+        asin: asin,
+        publisher: metadata["publisher"],
+        publication_date: publication_date,
         pages: nil,
-        cover_url: nil,
-        subtitle: nil,
-        description: "Item structure was invalid: #{inspect(item)}",
-        genre: nil,
-        series: nil,
-        series_number: nil,
+        cover_url: cover_url,
+        subtitle: metadata["subtitle"],
+        description: metadata["description"],
+        genre: format_genres(metadata["genres"] || []),
+        series: format_series(metadata["series"] || []),
+        series_number: series_number,
         original_title: nil,
         media_type: map_audiobookshelf_media_type(library_media_type),
-        external_id: "invalid-#{:os.system_time(:millisecond)}"
+        external_id: item["id"]
       }
     else
-      media = Map.get(item, "media")
-
-      if not is_map(media) do
-        Logger.error(
-          "Expected media to be a map but got: #{inspect(media)} for item: #{inspect(item)}"
-        )
-
-        # Return a minimal book structure
-        %{
-          title: Map.get(item, "name", "Unknown Title"),
-          author: "Unknown",
-          isbn10: nil,
-          isbn13: nil,
-          publisher: nil,
-          publication_date: nil,
-          pages: nil,
-          cover_url: build_cover_url(item),
-          subtitle: nil,
-          description: "Media structure was invalid",
-          genre: nil,
-          series: nil,
-          series_number: nil,
-          original_title: nil,
-          media_type: map_audiobookshelf_media_type(library_media_type),
-          external_id: Map.get(item, "id", "unknown-#{:os.system_time(:millisecond)}")
-        }
-      else
-        metadata = Map.get(media, "metadata", %{})
-
-        # Get cover URL - Audiobookshelf provides cover path
-        cover_url = build_cover_url(item)
-
-        # Parse publication date
-        publication_date =
-          case metadata["publishedYear"] do
-            year when is_integer(year) and year > 0 ->
-              Date.new(year, 1, 1)
-              |> case do
-                {:ok, date} -> date
-                _ -> nil
-              end
-
-            _ ->
-              nil
-          end
-
-        # Parse series number
-        series_number =
-          case metadata["seriesSequence"] do
-            sequence when is_binary(sequence) ->
-              case Integer.parse(sequence) do
-                {num, _} -> num
-                :error -> nil
-              end
-
-            sequence when is_integer(sequence) ->
-              sequence
-
-            _ ->
-              nil
-          end
-
-        %{
-          title: metadata["title"] || "Unknown Title",
-          author: metadata["authorName"] || "Unknown Author",
-          isbn10: metadata["isbn"],
-          isbn13: metadata["asin"],
-          publisher: metadata["publisher"],
-          publication_date: publication_date,
-          pages: nil,
-          cover_url: cover_url,
-          subtitle: metadata["subtitle"],
-          description: metadata["description"],
-          genre: format_genres(metadata["genres"] || []),
-          series: format_series(metadata["series"] || []),
-          series_number: series_number,
-          original_title: nil,
-          media_type: map_audiobookshelf_media_type(library_media_type),
-          external_id: item["id"]
-        }
-      end
+      _ ->
+        Logger.warning("Skipping invalid item structure: #{inspect(item)}")
+        nil
     end
   end
 
@@ -344,4 +305,16 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   end
 
   defp format_series(_), do: nil
+
+  defp parse_isbn_asin_data(metadata) do
+    # Use the centralized ISBN utils to parse identifiers
+    data = %{
+      "isbn10" => metadata["isbn"],
+      # Audiobookshelf typically puts everything in the isbn field
+      "isbn13" => nil,
+      "asin" => metadata["asin"]
+    }
+
+    IsbnUtils.parse_identifiers(data)
+  end
 end

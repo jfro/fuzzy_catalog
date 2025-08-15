@@ -227,6 +227,24 @@ defmodule FuzzyCatalog.Catalog do
   end
 
   @doc """
+  Gets a book by its Amazon ASIN.
+
+  ## Examples
+
+      iex> get_book_by_asin("B01234567X")
+      %Book{}
+
+      iex> get_book_by_asin("nonexistent")
+      nil
+
+  """
+  def get_book_by_asin(asin) when is_binary(asin) do
+    from(b in Book)
+    |> where([b], b.amazon_asin == ^asin)
+    |> Repo.one()
+  end
+
+  @doc """
   Finds a book by title and author combination.
 
   ## Examples

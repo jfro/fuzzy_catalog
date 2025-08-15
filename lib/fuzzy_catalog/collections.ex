@@ -97,6 +97,27 @@ defmodule FuzzyCatalog.Collections do
   end
 
   @doc """
+  Gets a collection item by external_id.
+
+  ## Examples
+
+      iex> get_collection_item_by_external_id("audiobookshelf-123")
+      %CollectionItem{}
+
+      iex> get_collection_item_by_external_id("nonexistent")
+      nil
+
+  """
+  def get_collection_item_by_external_id(external_id) when is_binary(external_id) do
+    CollectionItem
+    |> where([ci], ci.external_id == ^external_id)
+    |> preload(:book)
+    |> Repo.one()
+  end
+
+  def get_collection_item_by_external_id(_), do: nil
+
+  @doc """
   Checks if a book is in the collection (any media type).
 
   ## Examples

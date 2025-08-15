@@ -7,7 +7,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   """
 
   require Logger
-  alias FuzzyCatalog.{Catalog, Collections, Storage}
+  alias FuzzyCatalog.{Catalog, Collections, Storage, IsbnUtils}
 
   @doc """
   Synchronize books from all available external library providers.
@@ -139,7 +139,9 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         case create_book_from_sync_data(book_data) do
           {:ok, book} ->
             # Add to collection with the media type from sync data
-            case Collections.add_to_collection(book, book_data.media_type) do
+            collection_attrs = build_collection_attrs(book_data)
+
+            case Collections.add_to_collection(book, book_data.media_type, collection_attrs) do
               {:ok, _collection_item} ->
                 Logger.debug(
                   "Added new book '#{book.title}' to collection as #{book_data.media_type}"
@@ -163,11 +165,13 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         # Book exists, maybe update cover if we don't have one
         updated_book = maybe_update_cover(book, book_data)
 
-        # Ensure it's in the collection with the correct media type
-        if Collections.book_media_type_in_collection?(updated_book, book_data.media_type) do
+        # Check if collection item exists by external_id or book/media_type combination
+        if collection_item_exists?(updated_book, book_data) do
           {:ok, :existing}
         else
-          case Collections.add_to_collection(updated_book, book_data.media_type) do
+          collection_attrs = build_collection_attrs(book_data)
+
+          case Collections.add_to_collection(updated_book, book_data.media_type, collection_attrs) do
             {:ok, _collection_item} ->
               Logger.debug(
                 "Added existing book '#{updated_book.title}' to collection as #{book_data.media_type}"
@@ -187,14 +191,17 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   end
 
   defp find_existing_book(book_data) do
+    # Normalize ISBN/ASIN data for searching
+    {isbn10, isbn13, asin} = normalize_isbn_data(book_data)
+
     # First try by ISBN
     isbn_book =
       cond do
-        book_data.isbn13 && book_data.isbn13 != "" ->
-          Catalog.get_book_by_isbn(book_data.isbn13)
+        isbn13 && isbn13 != "" ->
+          Catalog.get_book_by_isbn(isbn13)
 
-        book_data.isbn10 && book_data.isbn10 != "" ->
-          Catalog.get_book_by_isbn(book_data.isbn10)
+        isbn10 && isbn10 != "" ->
+          Catalog.get_book_by_isbn(isbn10)
 
         true ->
           nil
@@ -202,8 +209,22 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
 
     case isbn_book do
       nil ->
-        # Fallback to title and author match
-        Catalog.find_book_by_title_and_author(book_data.title, book_data.author)
+        # Try by ASIN if available
+        asin_book =
+          if asin && asin != "" do
+            Catalog.get_book_by_asin(asin)
+          else
+            nil
+          end
+
+        case asin_book do
+          nil ->
+            # Fallback to title and author match
+            Catalog.find_book_by_title_and_author(book_data.title, book_data.author)
+
+          book ->
+            book
+        end
 
       book ->
         book
@@ -211,11 +232,14 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   end
 
   defp create_book_from_sync_data(book_data) do
+    # Normalize ISBN/ASIN data
+    {isbn10, isbn13, asin} = normalize_isbn_data(book_data)
+
     attrs = %{
       title: book_data.title,
       author: book_data.author,
-      isbn10: book_data.isbn10,
-      isbn13: book_data.isbn13,
+      isbn10: isbn10,
+      isbn13: isbn13,
       publisher: book_data.publisher,
       publication_date: book_data.publication_date,
       pages: book_data.pages,
@@ -224,7 +248,8 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
       genre: book_data.genre,
       series: book_data.series,
       series_number: book_data.series_number,
-      original_title: book_data.original_title
+      original_title: book_data.original_title,
+      amazon_asin: asin
     }
 
     # Download and store cover if available
@@ -278,6 +303,39 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
           Logger.debug("Failed to download cover for '#{book_data.title}': #{reason}")
           attrs
       end
+    else
+      attrs
+    end
+  end
+
+  defp collection_item_exists?(book, book_data) do
+    # First check by external_id if available
+    if Map.has_key?(book_data, :external_id) and not is_nil(book_data.external_id) do
+      case Collections.get_collection_item_by_external_id(book_data.external_id) do
+        nil ->
+          # Fallback to book/media_type check
+          Collections.book_media_type_in_collection?(book, book_data.media_type)
+
+        _item ->
+          true
+      end
+    else
+      # No external_id, use existing logic
+      Collections.book_media_type_in_collection?(book, book_data.media_type)
+    end
+  end
+
+  defp normalize_isbn_data(book_data) do
+    # Use the centralized ISBN utils to parse identifiers
+    IsbnUtils.parse_identifiers(book_data)
+  end
+
+  defp build_collection_attrs(book_data) do
+    attrs = %{}
+
+    # Add external_id if available
+    if Map.has_key?(book_data, :external_id) and not is_nil(book_data.external_id) do
+      Map.put(attrs, :external_id, book_data.external_id)
     else
       attrs
     end

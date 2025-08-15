@@ -8,6 +8,7 @@ defmodule FuzzyCatalog.Collections.CollectionItem do
     field :added_at, :utc_datetime
     field :notes, :string
     field :media_type, :string, default: "unspecified"
+    field :external_id, :string
 
     belongs_to :book, FuzzyCatalog.Catalog.Book
 
@@ -24,7 +25,7 @@ defmodule FuzzyCatalog.Collections.CollectionItem do
   @doc false
   def changeset(collection_item, attrs) do
     collection_item
-    |> cast(attrs, [:book_id, :media_type, :added_at, :notes])
+    |> cast(attrs, [:book_id, :media_type, :added_at, :notes, :external_id])
     |> validate_required([:book_id, :media_type])
     |> validate_inclusion(:media_type, @media_types)
     |> foreign_key_constraint(:book_id)
