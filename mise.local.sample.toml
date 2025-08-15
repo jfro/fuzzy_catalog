@@ -1,0 +1,11 @@
+[env]
+# unused so far, if we add better auth we can use this
+OIDC_CLIENT_ID = ""
+OIDC_CLIENT_SECRET = ""
+# Audiobookshelf support requires url to an instance + api key
+AUDIOBOOKSHELF_URL = ""
+AUDIOBOOKSHELF_API_KEY = ""
+# Libraries to sync with from ABS if it has more than 1 library
+AUDIOBOOKSHELF_LIBRARIES = "Audiobooks"
+# Calibre path (the folder) to sync ebook information from
+CALIBRE_LIBRARY_PATH = "./priv/calibre-lib-example"
