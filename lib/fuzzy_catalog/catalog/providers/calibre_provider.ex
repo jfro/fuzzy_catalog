@@ -295,11 +295,11 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
     series_number =
       case series_index do
         num when is_number(num) ->
-          round(num)
+          Decimal.from_float(num)
 
         str when is_binary(str) ->
           case Float.parse(str) do
-            {num, _} -> round(num)
+            {num, _} -> Decimal.from_float(num)
             :error -> nil
           end
 

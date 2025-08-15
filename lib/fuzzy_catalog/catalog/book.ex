@@ -54,6 +54,16 @@ defmodule FuzzyCatalog.Catalog.Book do
     |> validate_length(:title, min: 1, max: 255)
     |> validate_length(:author, min: 1, max: 255)
     |> validate_number(:pages, greater_than: 0)
-    |> validate_number(:series_number, greater_than: 0)
+    |> validate_series_number()
+  end
+
+  defp validate_series_number(changeset) do
+    validate_change(changeset, :series_number, fn :series_number, series_number ->
+      cond do
+        is_nil(series_number) -> []
+        Decimal.compare(series_number, 0) in [:gt, :eq] -> []
+        true -> [series_number: "must be greater than or equal to 0, got #{series_number}"]
+      end
+    end)
   end
 end
