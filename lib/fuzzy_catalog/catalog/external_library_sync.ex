@@ -260,7 +260,8 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
 
   defp get_available_providers do
     [
-      FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider
+      FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider,
+      FuzzyCatalog.Catalog.Providers.CalibreProvider
     ]
     |> Enum.filter(& &1.available?())
   end

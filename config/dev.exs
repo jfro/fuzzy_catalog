@@ -101,6 +101,9 @@ config :fuzzy_catalog, :audiobookshelf,
   api_key: System.get_env("AUDIOBOOKSHELF_API_KEY"),
   libraries: System.get_env("AUDIOBOOKSHELF_LIBRARIES")
 
+# Calibre configuration for development
+config :fuzzy_catalog, :calibre, library_path: System.get_env("CALIBRE_LIBRARY_PATH")
+
 # Storage configuration for development
 config :fuzzy_catalog, :storage,
   local: [

@@ -9,10 +9,13 @@ defmodule Mix.Tasks.SyncExternalLibraries do
 
   ## Configuration
 
-  Requires environment variables:
+  Audiobookshelf provider requires:
   - AUDIOBOOKSHELF_URL: Base URL for Audiobookshelf instance
   - AUDIOBOOKSHELF_API_KEY: API key for authentication
   - AUDIOBOOKSHELF_LIBRARIES: (optional) Comma-separated list of library names/IDs to sync
+
+  Calibre provider requires:
+  - CALIBRE_LIBRARY_PATH: Path to the Calibre library directory containing metadata.db
 
   """
 

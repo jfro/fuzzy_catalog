@@ -61,6 +61,9 @@ if config_env() == :prod do
     api_key: System.get_env("AUDIOBOOKSHELF_API_KEY"),
     libraries: System.get_env("AUDIOBOOKSHELF_LIBRARIES")
 
+  # Calibre configuration
+  config :fuzzy_catalog, :calibre, library_path: System.get_env("CALIBRE_LIBRARY_PATH")
+
   config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [
