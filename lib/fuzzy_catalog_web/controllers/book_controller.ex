@@ -328,40 +328,62 @@ defmodule FuzzyCatalogWeb.BookController do
 
     case extract_isbn(raw_barcode) do
       {:ok, isbn} ->
-        case BookLookup.lookup_by_isbn(isbn) do
-          {:ok, book_data} ->
-            book_params =
-              book_data
-              |> Enum.map(fn {k, v} -> {to_string(k), v} end)
-              |> Map.new()
-              |> Map.put("media_type", media_type)
+        # Step 1: Check if book already exists by ISBN
+        case Catalog.get_book_by_isbn(isbn) do
+          nil ->
+            # Step 2: Book doesn't exist by ISBN, lookup metadata from external providers
+            case BookLookup.lookup_by_isbn(isbn) do
+              {:ok, book_data} ->
+                book_params =
+                  book_data
+                  |> Enum.map(fn {k, v} -> {to_string(k), v} end)
+                  |> Map.new()
 
-            # Download and store cover if available
-            processed_params = download_cover_from_params(book_params)
+                title = book_params["title"]
+                author = book_params["author"]
 
-            case Catalog.create_book(processed_params) do
-              {:ok, book} ->
-                json(conn, %{
-                  success: true,
-                  book: %{
-                    id: book.id,
-                    title: book.title,
-                    author: book.author,
-                    isbn: isbn,
-                    media_type: media_type
-                  }
-                })
+                # Step 3: Check if book exists by title & author
+                case Catalog.find_book_by_title_and_author(title, author) do
+                  nil ->
+                    # Step 4: Book doesn't exist, create it
+                    final_params =
+                      book_params
+                      |> Map.put("media_type", media_type)
+                      |> download_cover_from_params()
 
-              {:error, changeset} ->
+                    case Catalog.create_book(final_params) do
+                      {:ok, book} ->
+                        json(conn, %{
+                          success: true,
+                          book: %{
+                            id: book.id,
+                            title: book.title,
+                            author: book.author,
+                            isbn: isbn,
+                            media_type: media_type
+                          }
+                        })
+
+                      {:error, changeset} ->
+                        conn
+                        |> put_status(400)
+                        |> json(%{error: "Failed to create book", details: changeset.errors})
+                    end
+
+                  existing_book ->
+                    # Book exists by title/author, add media type to collection
+                    handle_existing_book_for_batch(conn, existing_book, isbn, media_type)
+                end
+
+              {:error, reason} ->
                 conn
-                |> put_status(400)
-                |> json(%{error: "Failed to create book", details: changeset.errors})
+                |> put_status(404)
+                |> json(%{error: "Book not found: #{reason}"})
             end
 
-          {:error, reason} ->
-            conn
-            |> put_status(404)
-            |> json(%{error: "Book not found: #{reason}"})
+          existing_book ->
+            # Book exists, add media type to collection
+            handle_existing_book_for_batch(conn, existing_book, isbn, media_type)
         end
 
       {:error, reason} ->
@@ -375,6 +397,36 @@ defmodule FuzzyCatalogWeb.BookController do
     conn
     |> put_status(400)
     |> json(%{error: "Missing required parameters: barcode and media_type"})
+  end
+
+  defp handle_existing_book_for_batch(conn, existing_book, isbn, media_type) do
+    case Collections.add_to_collection(existing_book, media_type) do
+      {:ok, _collection} ->
+        json(conn, %{
+          success: true,
+          book: %{
+            id: existing_book.id,
+            title: existing_book.title,
+            author: existing_book.author,
+            isbn: isbn,
+            media_type: media_type
+          },
+          message: "Added #{media_type} to existing book"
+        })
+
+      {:error, %Ecto.Changeset{}} ->
+        json(conn, %{
+          success: true,
+          book: %{
+            id: existing_book.id,
+            title: existing_book.title,
+            author: existing_book.author,
+            isbn: isbn,
+            media_type: media_type
+          },
+          message: "Book already has this media type"
+        })
+    end
   end
 
   # Private helper functions
