@@ -205,7 +205,7 @@ defmodule FuzzyCatalog.SyncStatusManager do
           provider_status
           | status: :error,
             completed_at: DateTime.utc_now(),
-            error: error
+            error_message: error
         }
 
         new_providers = Map.put(state.providers, provider_name, failed_status)
@@ -215,7 +215,7 @@ defmodule FuzzyCatalog.SyncStatusManager do
           provider: provider_name,
           started_at: provider_status.started_at,
           completed_at: failed_status.completed_at,
-          error: error,
+          error_message: error,
           success: false
         }
 

@@ -331,7 +331,7 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
     cover_path = Path.join([library_path, book_path, "cover.jpg"])
 
     if File.exists?(cover_path) do
-      "file://" <> cover_path
+      cover_path
     else
       nil
     end
