@@ -14,139 +14,254 @@
     </:actions>
   </.header>
 
-  <div class="mb-6">
-    <form method="get" action={~p"/books"} class="flex gap-2 items-end">
-      <div class="flex-1">
-        <label class="form-control w-full">
-          <div class="label">
-            <span class="label-text">Search Books</span>
-          </div>
-          <input
-            type="text"
-            name="filters[search]"
-            value={get_search_value(@meta)}
-            placeholder="Search books by title, author, or series..."
-            class="input input-bordered w-full"
-          />
-        </label>
+  <div class="mb-6 space-y-4">
+    <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+      <form method="get" action={~p"/books"} class="flex gap-2 items-end flex-1 max-w-2xl">
+        <div class="flex-1">
+          <label class="form-control w-full">
+            <div class="label">
+              <span class="label-text">Search Books</span>
+            </div>
+            <input
+              type="text"
+              name="filters[search]"
+              value={get_search_value(@meta)}
+              placeholder="Search books by title, author, or series..."
+              class="input input-bordered w-full"
+            />
+            <input type="hidden" name="view" value={current_view_mode(assigns)} />
+          </label>
+        </div>
+        <div class="flex gap-2">
+          <button type="submit" class="btn btn-primary">
+            <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Search
+          </button>
+          <%= if has_search_filter?(@meta) do %>
+            <.link
+              href={build_view_url(@conn, @meta, current_view_mode(assigns))}
+              class="btn btn-outline"
+            >
+              <.icon name="hero-x-mark" class="h-4 w-4 mr-2" /> Clear
+            </.link>
+          <% end %>
+        </div>
+      </form>
+
+      <div class="flex gap-2 items-center">
+        <.link
+          href={toggle_view_url(@conn, @meta, current_view_mode(assigns))}
+          class="btn btn-outline btn-sm"
+          title={view_toggle_label(current_view_mode(assigns))}
+        >
+          <.icon name={view_toggle_icon(current_view_mode(assigns))} class="h-4 w-4 mr-2" />
+          {view_toggle_label(current_view_mode(assigns))}
+        </.link>
       </div>
-      <div class="flex gap-2">
-        <button type="submit" class="btn btn-primary">
-          <.icon name="hero-magnifying-glass" class="h-4 w-4 mr-2" /> Search
-        </button>
-        <%= if has_search_filter?(@meta) do %>
-          <.link href={~p"/books"} class="btn btn-outline">
-            <.icon name="hero-x-mark" class="h-4 w-4 mr-2" /> Clear
-          </.link>
-        <% end %>
-      </div>
-    </form>
+    </div>
   </div>
 
-  <div class="overflow-x-auto">
-    <Flop.Phoenix.table
-      id="books"
-      items={@books}
-      meta={@meta}
-      path={~p"/books"}
-      opts={[table_attrs: [class: "table table-zebra w-full"]]}
-    >
-      <:col :let={book} label="Cover">
-        <.link navigate={~p"/books/#{book}"} class="block">
-          <%= cond do %>
-            <% book.cover_image_key && match?({:ok, _}, FuzzyCatalog.Storage.get_cover_url(book.cover_image_key)) -> %>
-              <img
-                src={FuzzyCatalog.Storage.get_cover_url(book.cover_image_key) |> elem(1)}
-                alt={"Cover of #{book.title}"}
-                class="h-16 w-12 object-cover rounded shadow-sm"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-              />
-              <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
-                <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+  <%= if current_view_mode(assigns) == "grid" do %>
+    <!-- Grid/Cover View -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4 md:gap-6">
+      <%= for book <- @books do %>
+        <div class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow duration-200 group">
+          <figure class="px-4 pt-4">
+            <.link navigate={~p"/books/#{book}"} class="block">
+              <%= cond do %>
+                <% book.cover_image_key && match?({:ok, _}, FuzzyCatalog.Storage.get_cover_url(book.cover_image_key)) -> %>
+                  <img
+                    src={FuzzyCatalog.Storage.get_cover_url(book.cover_image_key) |> elem(1)}
+                    alt={"Cover of #{book.title}"}
+                    class="h-48 w-32 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  />
+                  <div class="h-48 w-32 bg-base-200 rounded-lg shadow-sm hidden items-center justify-center">
+                    <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50" />
+                  </div>
+                <% cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) -> %>
+                  <img
+                    src={cover_url}
+                    alt={"Cover of #{book.title}"}
+                    class="h-48 w-32 object-cover rounded-lg shadow-sm group-hover:shadow-md transition-shadow duration-200"
+                    onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                  />
+                  <div class="h-48 w-32 bg-base-200 rounded-lg shadow-sm hidden items-center justify-center">
+                    <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50" />
+                  </div>
+                <% true -> %>
+                  <div class="h-48 w-32 bg-base-200 rounded-lg shadow-sm flex items-center justify-center">
+                    <.icon name="hero-book-open" class="h-12 w-12 text-base-content/50" />
+                  </div>
+              <% end %>
+            </.link>
+          </figure>
+          <div class="card-body p-4 text-center">
+            <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
+              <h3 class="card-title text-sm font-semibold line-clamp-2 leading-tight mb-1">
+                {book.title}
+              </h3>
+              <p class="text-xs text-base-content/70 line-clamp-1 mb-2">
+                {book.author}
+              </p>
+            </.link>
+
+            <%= if book.media_types && length(book.media_types) > 0 do %>
+              <div class="flex flex-wrap gap-1 justify-center mb-2">
+                <%= for media_type <- Enum.take(book.media_types, 2) do %>
+                  <div class="badge badge-sm badge-outline capitalize">
+                    {if media_type == "unspecified", do: "Unspecified", else: media_type}
+                  </div>
+                <% end %>
+                <%= if length(book.media_types) > 2 do %>
+                  <div class="badge badge-sm badge-ghost">+{length(book.media_types) - 2}</div>
+                <% end %>
               </div>
-            <% cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) -> %>
-              <img
-                src={cover_url}
-                alt={"Cover of #{book.title}"}
-                class="h-16 w-12 object-cover rounded shadow-sm"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-              />
-              <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
-                <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
-              </div>
-            <% true -> %>
-              <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
-                <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
-              </div>
-          <% end %>
-        </.link>
-      </:col>
-      <:col
-        :let={book}
-        label="Title & Author"
-        field={:title}
-        col_style="cursor-pointer hover:bg-base-200"
-      >
-        <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
-          <div class="font-semibold">{book.title}</div>
-          <div class="text-sm text-base-content/70">{book.author}</div>
-        </.link>
-      </:col>
-      <:col :let={book} label="Media Types">
-        <div class="flex flex-wrap gap-1">
-          <div
-            :for={media_type <- book.media_types || []}
-            class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize"
-          >
-            {if media_type == "unspecified", do: "Unspecified", else: media_type}
+            <% end %>
+
+            <div class="card-actions justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              <.link navigate={~p"/books/#{book}/edit"} class="btn btn-xs btn-outline">
+                <.icon name="hero-pencil" class="h-3 w-3" /> Edit
+              </.link>
+              <.link
+                href={~p"/books/#{book}"}
+                method="delete"
+                data-confirm="Are you sure?"
+                class="btn btn-xs btn-outline btn-error"
+              >
+                <.icon name="hero-trash" class="h-3 w-3" /> Delete
+              </.link>
+            </div>
           </div>
         </div>
-      </:col>
-      <:col :let={book} label="Details">
-        <div class="text-xs space-y-1">
-          <%= if book.isbn13 do %>
-            <div><span class="font-mono">ISBN:</span> {book.isbn13}</div>
-          <% end %>
-          <%= if book.publisher do %>
-            <div><span class="text-base-content/60">Publisher:</span> {book.publisher}</div>
-          <% end %>
-        </div>
-      </:col>
-      <:action :let={book}>
-        <div class="flex gap-2">
-          <.link navigate={~p"/books/#{book}/edit"} class="btn btn-sm btn-outline">
-            <.icon name="hero-pencil" class="h-4 w-4" /> Edit
+      <% end %>
+    </div>
+  <% else %>
+    <!-- List/Table View -->
+    <div class="overflow-x-auto">
+      <Flop.Phoenix.table
+        id="books"
+        items={@books}
+        meta={@meta}
+        path={~p"/books"}
+        opts={[table_attrs: [class: "table table-zebra w-full"]]}
+      >
+        <:col :let={book} label="Cover">
+          <.link navigate={~p"/books/#{book}"} class="block">
+            <%= cond do %>
+              <% book.cover_image_key && match?({:ok, _}, FuzzyCatalog.Storage.get_cover_url(book.cover_image_key)) -> %>
+                <img
+                  src={FuzzyCatalog.Storage.get_cover_url(book.cover_image_key) |> elem(1)}
+                  alt={"Cover of #{book.title}"}
+                  class="h-16 w-12 object-cover rounded shadow-sm"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
+                  <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+                </div>
+              <% cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :small) -> %>
+                <img
+                  src={cover_url}
+                  alt={"Cover of #{book.title}"}
+                  class="h-16 w-12 object-cover rounded shadow-sm"
+                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                />
+                <div class="h-16 w-12 bg-base-200 rounded items-center justify-center hidden">
+                  <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+                </div>
+              <% true -> %>
+                <div class="h-16 w-12 bg-base-200 rounded flex items-center justify-center">
+                  <.icon name="hero-book-open" class="h-6 w-6 text-base-content/50" />
+                </div>
+            <% end %>
           </.link>
-          <.link
-            href={~p"/books/#{book}"}
-            method="delete"
-            data-confirm="Are you sure?"
-            class="btn btn-sm btn-outline btn-error"
-          >
-            <.icon name="hero-trash" class="h-4 w-4" /> Delete
+        </:col>
+        <:col
+          :let={book}
+          label="Title & Author"
+          field={:title}
+          col_style="cursor-pointer hover:bg-base-200"
+        >
+          <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
+            <div class="font-semibold">{book.title}</div>
+            <div class="text-sm text-base-content/70">{book.author}</div>
           </.link>
-        </div>
-      </:action>
-    </Flop.Phoenix.table>
-  </div>
+        </:col>
+        <:col :let={book} label="Media Types">
+          <div class="flex flex-wrap gap-1">
+            <div
+              :for={media_type <- book.media_types || []}
+              class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize"
+            >
+              {if media_type == "unspecified", do: "Unspecified", else: media_type}
+            </div>
+          </div>
+        </:col>
+        <:col :let={book} label="Details">
+          <div class="text-xs space-y-1">
+            <%= if book.isbn13 do %>
+              <div><span class="font-mono">ISBN:</span> {book.isbn13}</div>
+            <% end %>
+            <%= if book.publisher do %>
+              <div><span class="text-base-content/60">Publisher:</span> {book.publisher}</div>
+            <% end %>
+          </div>
+        </:col>
+        <:action :let={book}>
+          <div class="flex gap-2">
+            <.link navigate={~p"/books/#{book}/edit"} class="btn btn-sm btn-outline">
+              <.icon name="hero-pencil" class="h-4 w-4" /> Edit
+            </.link>
+            <.link
+              href={~p"/books/#{book}"}
+              method="delete"
+              data-confirm="Are you sure?"
+              class="btn btn-sm btn-outline btn-error"
+            >
+              <.icon name="hero-trash" class="h-4 w-4" /> Delete
+            </.link>
+          </div>
+        </:action>
+      </Flop.Phoenix.table>
+    </div>
+  <% end %>
 
   <div class="mt-6 flex justify-center">
-    <Flop.Phoenix.pagination
-      meta={@meta}
-      path={~p"/books"}
-      page_links={5}
-      page_list_attrs={[class: "join"]}
-      page_list_item_attrs={[]}
-      page_link_attrs={[class: "join-item btn btn-outline"]}
-      current_page_link_attrs={[class: "join-item btn btn-active"]}
-      disabled_link_attrs={[class: "join-item btn btn-disabled"]}
-    >
-      <:previous attrs={[class: "join-item btn btn-outline"]}>
-        <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
-      </:previous>
-      <:next attrs={[class: "join-item btn btn-outline"]}>
-        Next <.icon name="hero-chevron-right" class="h-4 w-4" />
-      </:next>
-    </Flop.Phoenix.pagination>
+    <%= if current_view_mode(assigns) == "grid" do %>
+      <Flop.Phoenix.pagination
+        meta={@meta}
+        path={~p"/books?view=grid"}
+        page_links={5}
+        page_list_attrs={[class: "join"]}
+        page_list_item_attrs={[]}
+        page_link_attrs={[class: "join-item btn btn-outline"]}
+        current_page_link_attrs={[class: "join-item btn btn-active"]}
+        disabled_link_attrs={[class: "join-item btn btn-disabled"]}
+      >
+        <:previous attrs={[class: "join-item btn btn-outline"]}>
+          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
+        </:previous>
+        <:next attrs={[class: "join-item btn btn-outline"]}>
+          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
+        </:next>
+      </Flop.Phoenix.pagination>
+    <% else %>
+      <Flop.Phoenix.pagination
+        meta={@meta}
+        path={~p"/books"}
+        page_links={5}
+        page_list_attrs={[class: "join"]}
+        page_list_item_attrs={[]}
+        page_link_attrs={[class: "join-item btn btn-outline"]}
+        current_page_link_attrs={[class: "join-item btn btn-active"]}
+        disabled_link_attrs={[class: "join-item btn btn-disabled"]}
+      >
+        <:previous attrs={[class: "join-item btn btn-outline"]}>
+          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
+        </:previous>
+        <:next attrs={[class: "join-item btn btn-outline"]}>
+          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
+        </:next>
+      </Flop.Phoenix.pagination>
+    <% end %>
   </div>
 </Layouts.app>

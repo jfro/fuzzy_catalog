@@ -11,7 +11,17 @@ defmodule FuzzyCatalogWeb.BookController do
 
   def index(conn, params) do
     {books, meta} = Collections.list_library_books(params)
-    render(conn, :index, books: books, meta: meta)
+    view_mode = get_view_mode(params)
+    render(conn, :index, books: books, meta: meta, view_mode: view_mode)
+  end
+
+  defp get_view_mode(params) do
+    case params["view"] do
+      "grid" -> "grid"
+      "list" -> "list"
+      # default to list view
+      _ -> "list"
+    end
   end
 
   def show(conn, %{"id" => id}) do
