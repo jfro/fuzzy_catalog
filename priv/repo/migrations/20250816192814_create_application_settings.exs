@@ -15,7 +15,7 @@ defmodule FuzzyCatalog.Repo.Migrations.CreateApplicationSettings do
     execute """
             INSERT INTO application_settings (key, value, inserted_at, updated_at) VALUES 
             ('registration_enabled', 'true', NOW(), NOW()),
-            ('email_verification_required', 'true', NOW(), NOW());
+            ('email_verification_required', 'false', NOW(), NOW());
             """,
             """
             DELETE FROM application_settings WHERE key IN ('registration_enabled', 'email_verification_required');

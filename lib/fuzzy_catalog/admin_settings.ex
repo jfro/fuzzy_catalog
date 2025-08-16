@@ -81,7 +81,7 @@ defmodule FuzzyCatalog.AdminSettings do
   Returns true if email verification is required for registration.
   """
   def email_verification_required? do
-    get_setting_value("email_verification_required", true)
+    get_setting_value("email_verification_required", false)
   end
 
   @doc """
