@@ -44,29 +44,12 @@
   </div>
 
   <div class="overflow-x-auto">
-    <style>
-      #books table {
-        @apply table table-zebra w-full;
-      }
-      #books thead {
-        @apply bg-base-200;
-      }
-      #books th {
-        @apply font-semibold text-base-content;
-      }
-      #books .sortable-column {
-        @apply cursor-pointer hover:bg-base-300 transition-colors;
-      }
-      #books .sortable-column:after {
-        content: " ⇅";
-        @apply text-base-content/50 ml-1;
-      }
-    </style>
     <Flop.Phoenix.table
       id="books"
       items={@books}
       meta={@meta}
       path={~p"/books"}
+      opts={[table_attrs: [class: "table table-zebra w-full"]]}
     >
       <:col :let={book} label="Cover">
         <.link navigate={~p"/books/#{book}"} class="block">

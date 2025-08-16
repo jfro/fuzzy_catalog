@@ -165,12 +165,12 @@ defmodule FuzzyCatalog.SyncStatusManager do
         {:noreply, state}
 
       provider_status ->
-        completed_status = %{
-          provider_status
-          | status: :idle,
-            completed_at: DateTime.utc_now(),
-            last_results: results
-        }
+        completed_at = DateTime.utc_now()
+        completed_status = Map.merge(provider_status, %{
+          status: :idle,
+          completed_at: completed_at,
+          last_results: results
+        })
 
         new_providers = Map.put(state.providers, provider_name, completed_status)
 

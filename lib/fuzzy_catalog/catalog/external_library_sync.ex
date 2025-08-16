@@ -43,86 +43,117 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   Synchronize books from a specific provider using streaming for efficient memory usage.
   """
   def sync_provider(provider_module) do
-    Logger.info("Syncing books from #{provider_module.provider_name()}")
+    provider_name = provider_module.provider_name()
+    Logger.info("Syncing books from #{provider_name}")
 
-    case get_books_stream(provider_module) do
-      {:ok, books_stream} ->
-        Logger.info("Starting streaming sync from #{provider_module.provider_name()}")
+    # Start the sync in the status manager
+    case SyncStatusManager.start_sync(provider_name) do
+      :ok ->
+        Logger.info("ExternalLibrarySync: Started sync status tracking for #{provider_name}")
+        
+        try do
+          result = case get_books_stream(provider_module) do
+            {:ok, books_stream} ->
+              Logger.info("Starting streaming sync from #{provider_name}")
 
-        stats = %{
-          provider: provider_module.provider_name(),
-          total_books: 0,
-          new_books: 0,
-          errors: []
-        }
-
-        final_stats =
-          books_stream
-          |> Stream.with_index(1)
-          |> Enum.reduce(stats, fn {book_data, index}, acc_stats ->
-            # Update progress every 10 books and log progress every 100 books
-            if rem(index, 10) == 0 do
-              progress = %{
-                total_books: index,
-                processed_books: index,
-                new_books: acc_stats.new_books,
-                errors: acc_stats.errors
+              stats = %{
+                provider: provider_name,
+                total_books: 0,
+                new_books: 0,
+                errors: []
               }
 
-              SyncStatusManager.update_progress(provider_module.provider_name(), progress)
-            end
+              final_stats =
+                books_stream
+                |> Stream.with_index(1)
+                |> Enum.reduce(stats, fn {book_data, index}, acc_stats ->
+                  # Update progress every 10 books and log progress every 100 books
+                  if rem(index, 10) == 0 do
+                    progress = %{
+                      total_books: index,
+                      processed_books: index,
+                      new_books: acc_stats.new_books,
+                      errors: acc_stats.errors
+                    }
 
-            if rem(index, 100) == 0 do
+                    SyncStatusManager.update_progress(provider_name, progress)
+                  end
+
+                  if rem(index, 100) == 0 do
+                    Logger.info(
+                      "Processed #{index} books from #{provider_name} " <>
+                        "(#{acc_stats.new_books} new, #{length(acc_stats.errors)} errors)"
+                    )
+                  end
+
+                  case sync_book(book_data) do
+                    {:ok, :new} ->
+                      %{
+                        acc_stats
+                        | total_books: acc_stats.total_books + 1,
+                          new_books: acc_stats.new_books + 1
+                      }
+
+                    {:ok, :existing} ->
+                      %{acc_stats | total_books: acc_stats.total_books + 1}
+
+                    {:error, reason} ->
+                      error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
+                      Logger.error(error_msg)
+
+                      %{
+                        acc_stats
+                        | total_books: acc_stats.total_books + 1,
+                          errors: [error_msg | acc_stats.errors]
+                      }
+                  end
+                end)
+
               Logger.info(
-                "Processed #{index} books from #{provider_module.provider_name()} " <>
-                  "(#{acc_stats.new_books} new, #{length(acc_stats.errors)} errors)"
+                "Completed sync from #{provider_name}: " <>
+                  "#{final_stats.new_books}/#{final_stats.total_books} new books added"
               )
-            end
 
-            case sync_book(book_data) do
-              {:ok, :new} ->
-                %{
-                  acc_stats
-                  | total_books: acc_stats.total_books + 1,
-                    new_books: acc_stats.new_books + 1
-                }
+              Logger.info("ExternalLibrarySync: Calling SyncStatusManager.complete_sync for #{provider_name}")
+              SyncStatusManager.complete_sync(provider_name, final_stats)
+              Logger.info("ExternalLibrarySync: Successfully completed sync for #{provider_name}")
 
-              {:ok, :existing} ->
-                %{acc_stats | total_books: acc_stats.total_books + 1}
+              {provider_module, final_stats}
 
-              {:error, reason} ->
-                error_msg = "Failed to sync book '#{book_data.title}': #{reason}"
-                Logger.error(error_msg)
+            {:error, reason} ->
+              error_msg = "Failed to get books stream from #{provider_name}: #{reason}"
+              Logger.error(error_msg)
 
-                %{
-                  acc_stats
-                  | total_books: acc_stats.total_books + 1,
-                    errors: [error_msg | acc_stats.errors]
-                }
-            end
-          end)
+              stats = %{
+                provider: provider_name,
+                total_books: 0,
+                new_books: 0,
+                errors: [error_msg]
+              }
 
-        Logger.info(
-          "Completed sync from #{provider_module.provider_name()}: " <>
-            "#{final_stats.new_books}/#{final_stats.total_books} new books added"
-        )
+              Logger.info("ExternalLibrarySync: Calling SyncStatusManager.fail_sync for #{provider_name}")
+              SyncStatusManager.fail_sync(provider_name, error_msg)
 
-        {provider_module, final_stats}
+              {provider_module, stats}
+          end
+          
+          result
+        rescue
+          error ->
+            Logger.error("ExternalLibrarySync: Sync failed for #{provider_name}: #{inspect(error)}")
+            SyncStatusManager.fail_sync(provider_name, inspect(error))
+            raise error
+        end
 
-      {:error, reason} ->
-        error_msg =
-          "Failed to get books stream from #{provider_module.provider_name()}: #{reason}"
-
-        Logger.error(error_msg)
-
-        stats = %{
-          provider: provider_module.provider_name(),
+      {:error, :already_syncing} ->
+        Logger.warning("ExternalLibrarySync: Provider #{provider_name} is already syncing")
+        error_stats = %{
+          provider: provider_name,
           total_books: 0,
           new_books: 0,
-          errors: [error_msg]
+          errors: ["Provider is already syncing"]
         }
-
-        {provider_module, stats}
+        {provider_module, error_stats}
     end
   end
 

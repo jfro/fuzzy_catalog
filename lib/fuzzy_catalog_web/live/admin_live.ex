@@ -79,7 +79,7 @@ defmodule FuzzyCatalogWeb.AdminLive do
           {:noreply, put_flash(socket, :error, "#{provider_name} is already syncing")}
         else
           Logger.info("Starting sync task for #{provider_name}")
-          Task.start(fn -> sync_provider_with_status(provider_module) end)
+          spawn(fn -> sync_provider_with_status(provider_module) end)
 
           socket =
             socket
@@ -162,20 +162,19 @@ defmodule FuzzyCatalogWeb.AdminLive do
 
   defp sync_provider_with_status(provider_module) do
     provider_name = provider_module.provider_name()
+    Logger.info("AdminLive: Starting sync for #{provider_name}")
 
-    case SyncStatusManager.start_sync(provider_name) do
-      :ok ->
-        try do
-          {_provider, stats} = ExternalLibrarySync.sync_provider(provider_module)
-          SyncStatusManager.complete_sync(provider_name, stats)
-        rescue
-          error ->
-            Logger.error("Sync failed for #{provider_name}: #{inspect(error)}")
-            SyncStatusManager.fail_sync(provider_name, inspect(error))
+    try do
+      Logger.info("AdminLive: Calling ExternalLibrarySync.sync_provider for #{provider_name}")
+      {_provider, _stats} = ExternalLibrarySync.sync_provider(provider_module)
+      Logger.info("AdminLive: ExternalLibrarySync.sync_provider completed for #{provider_name}")
+    rescue
+      error ->
+        Logger.error("AdminLive: Sync failed for #{provider_name}: #{inspect(error)}")
+        # ExternalLibrarySync should handle status updates, but let's be safe
+        if SyncStatusManager.syncing?(provider_name) do
+          SyncStatusManager.fail_sync(provider_name, inspect(error))
         end
-
-      {:error, :already_syncing} ->
-        Logger.warning("Attempted to start sync for #{provider_name} but it's already syncing")
     end
   end
 
