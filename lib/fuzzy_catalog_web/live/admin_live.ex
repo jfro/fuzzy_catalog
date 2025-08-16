@@ -22,7 +22,7 @@ defmodule FuzzyCatalogWeb.AdminLive do
   @impl true
   def mount(_params, session, socket) do
     Logger.info("AdminLive mount called - connected: #{connected?(socket)}")
-    
+
     if connected?(socket) do
       Logger.info("AdminLive subscribing to PubSub")
       Phoenix.PubSub.subscribe(FuzzyCatalog.PubSub, "sync_status")

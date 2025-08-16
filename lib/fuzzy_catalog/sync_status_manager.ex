@@ -36,8 +36,8 @@ defmodule FuzzyCatalog.SyncStatusManager do
   @doc """
   Mark a provider as starting sync.
   """
-  def start_sync(provider_name) do
-    GenServer.call(__MODULE__, {:start_sync, provider_name})
+  def start_sync(provider_name, total_books \\ nil) do
+    GenServer.call(__MODULE__, {:start_sync, provider_name, total_books})
   end
 
   @doc """
@@ -99,7 +99,7 @@ defmodule FuzzyCatalog.SyncStatusManager do
   end
 
   @impl true
-  def handle_call({:start_sync, provider_name}, _from, state) do
+  def handle_call({:start_sync, provider_name, total_books}, _from, state) do
     case Map.get(state.providers, provider_name, %{}) do
       %{status: :syncing} ->
         {:reply, {:error, :already_syncing}, state}
@@ -108,7 +108,7 @@ defmodule FuzzyCatalog.SyncStatusManager do
         new_status = %{
           status: :syncing,
           started_at: DateTime.utc_now(),
-          progress: %{total_books: 0, processed_books: 0, new_books: 0, errors: []}
+          progress: %{total_books: total_books || 0, processed_books: 0, new_books: 0, errors: []}
         }
 
         new_providers = Map.put(state.providers, provider_name, new_status)
@@ -166,11 +166,13 @@ defmodule FuzzyCatalog.SyncStatusManager do
 
       provider_status ->
         completed_at = DateTime.utc_now()
-        completed_status = Map.merge(provider_status, %{
-          status: :idle,
-          completed_at: completed_at,
-          last_results: results
-        })
+
+        completed_status =
+          Map.merge(provider_status, %{
+            status: :idle,
+            completed_at: completed_at,
+            last_results: results
+          })
 
         new_providers = Map.put(state.providers, provider_name, completed_status)
 

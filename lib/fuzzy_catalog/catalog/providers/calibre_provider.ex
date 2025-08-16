@@ -61,6 +61,56 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
     end
   end
 
+  @doc """
+  Get the total count of books that will be synced from the Calibre library.
+  """
+  def get_total_books_count do
+    case get_library_path() do
+      {:ok, library_path} ->
+        metadata_db_path = Path.join(library_path, "metadata.db")
+
+        case open_database(metadata_db_path) do
+          {:ok, db} ->
+            try do
+              count_query = "SELECT COUNT(*) FROM books"
+
+              case Exqlite.Sqlite3.prepare(db, count_query) do
+                {:ok, statement} ->
+                  case Exqlite.Sqlite3.step(db, statement) do
+                    {:row, [count]} when is_integer(count) ->
+                      Exqlite.Sqlite3.release(db, statement)
+                      Logger.debug("Total books count in Calibre library: #{count}")
+                      {:ok, count}
+
+                    {:row, _row} ->
+                      Exqlite.Sqlite3.release(db, statement)
+                      {:error, "Unexpected count query result format"}
+
+                    :done ->
+                      Exqlite.Sqlite3.release(db, statement)
+                      {:ok, 0}
+
+                    {:error, reason} ->
+                      Exqlite.Sqlite3.release(db, statement)
+                      {:error, "Failed to execute count query: #{reason}"}
+                  end
+
+                {:error, reason} ->
+                  {:error, "Failed to prepare count query: #{reason}"}
+              end
+            after
+              close_database(db)
+            end
+
+          error ->
+            error
+        end
+
+      error ->
+        error
+    end
+  end
+
   defp get_library_path do
     config = Application.get_env(:fuzzy_catalog, :calibre, [])
 

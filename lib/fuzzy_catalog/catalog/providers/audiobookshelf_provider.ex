@@ -59,6 +59,37 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
     end
   end
 
+  @doc """
+  Get the total count of books that will be synced from configured libraries.
+  """
+  def get_total_books_count do
+    case get_config() do
+      {:ok, {base_url, api_key, library_filter}} ->
+        case fetch_libraries(base_url, api_key) do
+          {:ok, libraries} ->
+            filtered_libraries = filter_libraries(libraries, library_filter)
+
+            total_count =
+              filtered_libraries
+              |> Enum.reduce(0, fn library, acc ->
+                case get_library_total_count(library["id"], base_url, api_key) do
+                  {:ok, count} -> acc + count
+                  {:error, _} -> acc
+                end
+              end)
+
+            Logger.debug("Total books count across filtered libraries: #{total_count}")
+            {:ok, total_count}
+
+          error ->
+            error
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
   defp get_config do
     config = Application.get_env(:fuzzy_catalog, :audiobookshelf, [])
 
@@ -186,6 +217,32 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
       {:ok, %{status: status, body: body}} ->
         Logger.error("Failed to fetch library items: HTTP #{status} - #{inspect(body)}")
         {:error, "Failed to fetch library items: HTTP #{status}"}
+
+      {:error, exception} ->
+        Logger.error("Request failed: #{inspect(exception)}")
+        {:error, "Request failed: #{inspect(exception)}"}
+    end
+  end
+
+  defp get_library_total_count(library_id, base_url, api_key) do
+    url = "#{base_url}/api/libraries/#{library_id}/items"
+    headers = [{"Authorization", "Bearer #{api_key}"}]
+    # Just fetch the first page to get the total count
+    params = [limit: 1, page: 0]
+
+    Logger.debug("Fetching total count for library #{library_id}")
+
+    case Req.get(url, headers: headers, params: params) do
+      {:ok, %{status: 200, body: %{"total" => total}}} when is_integer(total) ->
+        {:ok, total}
+
+      {:ok, %{status: 200, body: body}} ->
+        Logger.error("Unexpected response structure: #{inspect(body)}")
+        {:error, "Unexpected response structure: missing total"}
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.error("Failed to fetch library total: HTTP #{status} - #{inspect(body)}")
+        {:error, "Failed to fetch library total: HTTP #{status}"}
 
       {:error, exception} ->
         Logger.error("Request failed: #{inspect(exception)}")
