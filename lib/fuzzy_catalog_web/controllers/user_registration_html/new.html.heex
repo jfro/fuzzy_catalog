@@ -23,9 +23,36 @@
         phx-mounted={JS.focus()}
       />
 
+      <%= if not @email_required do %>
+        <.input
+          field={f[:password]}
+          type="password"
+          label="Password"
+          autocomplete="new-password"
+          required
+        />
+        <.input
+          field={f[:password_confirmation]}
+          type="password"
+          label="Confirm password"
+          autocomplete="new-password"
+          required
+        />
+      <% end %>
+
       <.button phx-disable-with="Creating account..." class="btn btn-primary w-full">
-        Create an account
+        <%= if @email_required do %>
+          Create account (email verification required)
+        <% else %>
+          Create account
+        <% end %>
       </.button>
     </.form>
+
+    <%= if @email_required do %>
+      <div class="mt-4 text-sm text-gray-600 text-center">
+        You will receive an email with a login link to verify your account.
+      </div>
+    <% end %>
   </div>
 </Layouts.app>

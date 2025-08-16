@@ -21,9 +21,15 @@ defmodule FuzzyCatalogWeb.UserSessionController do
 
     case Accounts.login_user_by_magic_link(token) do
       {:ok, {user, _expired_tokens}} ->
-        conn
-        |> put_flash(:info, info)
-        |> UserAuth.log_in_user(user, user_params)
+        if Accounts.active?(user) do
+          conn
+          |> put_flash(:info, info)
+          |> UserAuth.log_in_user(user, user_params)
+        else
+          conn
+          |> put_flash(:error, "Your account has been disabled. Please contact an administrator.")
+          |> render(:new, form: Phoenix.Component.to_form(%{}, as: "user"))
+        end
 
       {:error, :not_found} ->
         conn
@@ -35,9 +41,17 @@ defmodule FuzzyCatalogWeb.UserSessionController do
   # email + password login
   def create(conn, %{"user" => %{"email" => email, "password" => password} = user_params}) do
     if user = Accounts.get_user_by_email_and_password(email, password) do
-      conn
-      |> put_flash(:info, "Welcome back!")
-      |> UserAuth.log_in_user(user, user_params)
+      if Accounts.active?(user) do
+        conn
+        |> put_flash(:info, "Welcome back!")
+        |> UserAuth.log_in_user(user, user_params)
+      else
+        form = Phoenix.Component.to_form(user_params, as: "user")
+
+        conn
+        |> put_flash(:error, "Your account has been disabled. Please contact an administrator.")
+        |> render(:new, form: form)
+      end
     else
       form = Phoenix.Component.to_form(user_params, as: "user")
 

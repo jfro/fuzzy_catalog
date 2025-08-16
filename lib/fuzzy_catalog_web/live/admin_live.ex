@@ -23,24 +23,35 @@ defmodule FuzzyCatalogWeb.AdminLive do
   def mount(_params, session, socket) do
     Logger.info("AdminLive mount called - connected: #{connected?(socket)}")
 
-    if connected?(socket) do
-      Logger.info("AdminLive subscribing to PubSub")
-      Phoenix.PubSub.subscribe(FuzzyCatalog.PubSub, "sync_status")
-    end
-
     # Get current scope from session like the auth plug does
     current_scope = get_current_scope_from_session(session)
     Logger.info("AdminLive current_scope: #{inspect(current_scope)}")
 
-    socket =
-      socket
-      |> assign(:current_scope, current_scope)
-      |> assign(:providers, get_providers_with_status())
-      |> assign(:page_title, "Admin - External Library Sync")
-      |> assign(:syncing_all, false)
+    # Verify user is admin
+    if current_scope.user && Accounts.admin?(current_scope.user) &&
+         Accounts.active?(current_scope.user) do
+      if connected?(socket) do
+        Logger.info("AdminLive subscribing to PubSub")
+        Phoenix.PubSub.subscribe(FuzzyCatalog.PubSub, "sync_status")
+      end
 
-    Logger.info("AdminLive mount completed successfully")
-    {:ok, socket, layout: {FuzzyCatalogWeb.Layouts, :live}}
+      socket =
+        socket
+        |> assign(:current_scope, current_scope)
+        |> assign(:providers, get_providers_with_status())
+        |> assign(:page_title, "Admin - External Library Sync")
+        |> assign(:syncing_all, false)
+
+      Logger.info("AdminLive mount completed successfully")
+      {:ok, socket, layout: {FuzzyCatalogWeb.Layouts, :live}}
+    else
+      socket =
+        socket
+        |> put_flash(:error, "Access denied. Admin privileges required.")
+        |> push_navigate(to: ~p"/")
+
+      {:ok, socket}
+    end
   end
 
   defp get_current_scope_from_session(session) do

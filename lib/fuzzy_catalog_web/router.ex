@@ -74,6 +74,7 @@ defmodule FuzzyCatalogWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live "/", AdminLive, :index
+    live "/users", AdminUsersLive, :index
   end
 
   scope "/", FuzzyCatalogWeb do

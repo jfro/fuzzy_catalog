@@ -8,6 +8,8 @@ defmodule FuzzyCatalog.Accounts.User do
     field :hashed_password, :string, redact: true
     field :confirmed_at, :utc_datetime
     field :authenticated_at, :utc_datetime, virtual: true
+    field :role, :string, default: "user"
+    field :status, :string, default: "active"
 
     timestamps(type: :utc_datetime)
   end
@@ -129,4 +131,38 @@ defmodule FuzzyCatalog.Accounts.User do
     Bcrypt.no_user_verify()
     false
   end
+
+  @doc """
+  A user changeset for changing role and status by admins.
+  """
+  def admin_changeset(user, attrs, _opts \\ []) do
+    user
+    |> cast(attrs, [:role, :status])
+    |> validate_inclusion(:role, ["user", "admin"])
+    |> validate_inclusion(:status, ["active", "disabled"])
+  end
+
+  @doc """
+  A user changeset for creating users with email and password.
+  """
+  def registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :password, :role, :status])
+    |> validate_email(opts)
+    |> validate_password(opts)
+    |> validate_inclusion(:role, ["user", "admin"])
+    |> validate_inclusion(:status, ["active", "disabled"])
+  end
+
+  @doc """
+  Returns true if the user has admin role.
+  """
+  def admin?(%__MODULE__{role: "admin"}), do: true
+  def admin?(_), do: false
+
+  @doc """
+  Returns true if the user account is active.
+  """
+  def active?(%__MODULE__{status: "active"}), do: true
+  def active?(_), do: false
 end

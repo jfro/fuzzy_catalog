@@ -1,0 +1,262 @@
+<div class="space-y-6">
+  <!-- Admin Navigation -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-base-content">Admin Panel</h1>
+    <div class="mt-4">
+      <nav class="flex space-x-4">
+        <.link
+          navigate={~p"/admin"}
+          class="px-3 py-2 text-sm font-medium rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+        >
+          External Sync
+        </.link>
+        <.link
+          navigate={~p"/admin/users"}
+          class="px-3 py-2 text-sm font-medium rounded-md bg-indigo-100 text-indigo-700"
+        >
+          User Management
+        </.link>
+      </nav>
+    </div>
+  </div>
+
+  <.header>
+    User Management
+    <:subtitle>Manage users and registration settings</:subtitle>
+  </.header>
+  
+<!-- Registration Settings -->
+  <div class="bg-white shadow rounded-lg p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Registration Settings</h3>
+
+    <div class="space-y-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="text-sm font-medium text-gray-900">Allow New Registrations</h4>
+          <p class="text-sm text-gray-500">Enable or disable new user registrations</p>
+        </div>
+        <button
+          phx-click="toggle_registration"
+          class={[
+            "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2",
+            if(@registration_enabled, do: "bg-indigo-600", else: "bg-gray-200")
+          ]}
+        >
+          <span class={[
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+            if(@registration_enabled, do: "translate-x-5", else: "translate-x-0")
+          ]}>
+          </span>
+        </button>
+      </div>
+
+      <div class="flex items-center justify-between">
+        <div>
+          <h4 class="text-sm font-medium text-gray-900">Require Email Verification</h4>
+          <p class="text-sm text-gray-500">
+            Users must verify email or can register with password
+          </p>
+        </div>
+        <button
+          phx-click="toggle_email_verification"
+          class={[
+            "relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:ring-offset-2",
+            if(@email_verification_required, do: "bg-indigo-600", else: "bg-gray-200")
+          ]}
+        >
+          <span class={[
+            "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+            if(@email_verification_required, do: "translate-x-5", else: "translate-x-0")
+          ]}>
+          </span>
+        </button>
+      </div>
+    </div>
+  </div>
+  
+<!-- User Management -->
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h3 class="text-lg font-medium text-gray-900">Users</h3>
+        <button
+          phx-click="show_create_form"
+          class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Create User
+        </button>
+      </div>
+    </div>
+    
+<!-- Create User Form -->
+    <%= if @show_create_form do %>
+      <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+        <.form
+          :let={f}
+          for={@create_changeset}
+          phx-submit="create_user"
+          class="space-y-4"
+        >
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <.input
+              field={f[:email]}
+              type="email"
+              label="Email"
+              required
+            />
+            <.input
+              field={f[:password]}
+              type="password"
+              label="Password"
+              required
+            />
+          </div>
+
+          <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <.input
+              field={f[:role]}
+              type="select"
+              label="Role"
+              options={[{"User", "user"}, {"Admin", "admin"}]}
+              value="user"
+            />
+            <.input
+              field={f[:status]}
+              type="select"
+              label="Status"
+              options={[{"Active", "active"}, {"Disabled", "disabled"}]}
+              value="active"
+            />
+          </div>
+
+          <div class="flex justify-end space-x-3">
+            <button
+              type="button"
+              phx-click="hide_create_form"
+              class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+              Cancel
+            </button>
+            <.button
+              phx-disable-with="Creating..."
+              disabled={@creating_user}
+              class="bg-indigo-600 hover:bg-indigo-700"
+            >
+              Create User
+            </.button>
+          </div>
+        </.form>
+      </div>
+    <% end %>
+    
+<!-- Users Table -->
+    <div class="overflow-hidden">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              User
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Role
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Created
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <%= for user <- @users do %>
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div>
+                  <div class="text-sm font-medium text-gray-900">{user.email}</div>
+                  <%= if user.confirmed_at do %>
+                    <div class="text-xs text-green-600">Confirmed</div>
+                  <% else %>
+                    <div class="text-xs text-yellow-600">Unconfirmed</div>
+                  <% end %>
+                </div>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class={[
+                  "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
+                  if(user.role == "admin",
+                    do: "bg-purple-100 text-purple-800",
+                    else: "bg-gray-100 text-gray-800"
+                  )
+                ]}>
+                  {String.capitalize(user.role)}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class={[
+                  "inline-flex px-2 py-1 text-xs font-semibold rounded-full",
+                  if(user.status == "active",
+                    do: "bg-green-100 text-green-800",
+                    else: "bg-red-100 text-red-800"
+                  )
+                ]}>
+                  {String.capitalize(user.status)}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                <%= if @editing_user && @editing_user.id == user.id do %>
+                  <.form
+                    :let={f}
+                    for={@edit_changeset}
+                    phx-submit="update_user"
+                    class="flex items-center space-x-2"
+                  >
+                    <.input
+                      field={f[:role]}
+                      type="select"
+                      options={[{"User", "user"}, {"Admin", "admin"}]}
+                      class="text-xs"
+                    />
+                    <.input
+                      field={f[:status]}
+                      type="select"
+                      options={[{"Active", "active"}, {"Disabled", "disabled"}]}
+                      class="text-xs"
+                    />
+                    <button
+                      type="submit"
+                      class="text-indigo-600 hover:text-indigo-900 text-xs"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      phx-click="cancel_edit"
+                      class="text-gray-600 hover:text-gray-900 text-xs"
+                    >
+                      Cancel
+                    </button>
+                  </.form>
+                <% else %>
+                  <button
+                    phx-click="edit_user"
+                    phx-value-user_id={user.id}
+                    class="text-indigo-600 hover:text-indigo-900"
+                  >
+                    Edit
+                  </button>
+                <% end %>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

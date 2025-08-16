@@ -80,6 +80,36 @@ defmodule FuzzyCatalog.Accounts do
     |> Repo.insert()
   end
 
+  @doc """
+  Registers a user with email and password.
+
+  ## Examples
+
+      iex> register_user_with_password(%{email: "user@example.com", password: "validpassword123"})
+      {:ok, %User{}}
+
+      iex> register_user_with_password(%{email: "invalid", password: "short"})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def register_user_with_password(attrs) do
+    # Set confirmed_at for password registrations to automatically confirm accounts
+    attrs = Map.put(attrs, "confirmed_at", DateTime.utc_now(:second))
+
+    %User{}
+    |> User.registration_changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Creates a user by admin with specified role and status.
+  """
+  def create_user_by_admin(attrs) do
+    %User{}
+    |> User.registration_changeset(attrs)
+    |> Repo.insert()
+  end
+
   ## Settings
 
   @doc """
@@ -279,6 +309,65 @@ defmodule FuzzyCatalog.Accounts do
   def delete_user_session_token(token) do
     Repo.delete_all(from(UserToken, where: [token: ^token, context: "session"]))
     :ok
+  end
+
+  ## Admin functions
+
+  @doc """
+  Returns true if the user is an admin.
+  """
+  def admin?(user), do: User.admin?(user)
+
+  @doc """
+  Returns true if the user account is active.
+  """
+  def active?(user), do: User.active?(user)
+
+  @doc """
+  Lists all users.
+  """
+  def list_users do
+    Repo.all(User)
+  end
+
+  @doc """
+  Updates user role and status by admin.
+  """
+  def update_user_by_admin(user, attrs) do
+    user
+    |> User.admin_changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Returns a changeset for editing user role and status.
+  """
+  def change_user_admin(user, attrs \\ %{}) do
+    User.admin_changeset(user, attrs)
+  end
+
+  @doc """
+  Ensures the first user gets admin role.
+  """
+  def ensure_first_user_is_admin do
+    case Repo.aggregate(User, :count, :id) do
+      0 ->
+        :no_users
+
+      1 ->
+        case Repo.one(from u in User, limit: 1) do
+          %User{role: "admin"} = user ->
+            {:ok, user}
+
+          %User{} = user ->
+            user
+            |> User.admin_changeset(%{role: "admin"})
+            |> Repo.update()
+        end
+
+      _ ->
+        :multiple_users
+    end
   end
 
   ## Token helper
