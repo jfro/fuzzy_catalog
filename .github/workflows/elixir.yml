@@ -14,10 +14,28 @@ on:
 permissions:
   contents: read
 
+env:
+  MIX_ENV: test
+
 jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
+
+    services:
+      test_db:
+        image: postgres:latest
+        ports: ["5432:5432"]
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_HOST_AUTH_METHOD: "trust"
+          POSTGRES_DB: fuzzy_catalog_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -34,5 +52,7 @@ jobs:
           restore-keys: ${{ runner.os }}-mix-
       - name: Install dependencies
         run: mix deps.get
+      - name: Compile
+        run: mix compile
       - name: Run tests
         run: mix test
