@@ -12,7 +12,7 @@ services:
       dockerfile: ./Dockerfile
     user: "65534:65534" # nobody user
     volumes:
-      - uploads_covers:/app-uploads-covers
+      - uploads:/app-uploads
     ports:
       - "4000:4000"
     depends_on:
@@ -20,4 +20,4 @@ services:
     env_file: .env.docker
 volumes:
   postgres_data:
-  uploads_covers:
+  uploads:
