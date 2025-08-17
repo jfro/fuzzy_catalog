@@ -22,15 +22,15 @@ FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends build-essential git \
-  && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends build-essential git \
+    && rm -rf /var/lib/apt/lists/*
 
 # prepare build dir
 WORKDIR /app
 
 # install hex + rebar
 RUN mix local.hex --force \
-  && mix local.rebar --force
+    && mix local.rebar --force
 
 # set build ENV
 ENV MIX_ENV="prod"
@@ -70,13 +70,16 @@ RUN mix release
 # the compiled release and other runtime necessities
 FROM ${RUNNER_IMAGE} AS final
 
+LABEL org.opencontainers.image.source=https://github.com/jfro/fuzzy_catalog
+LABEL org.opencontainers.image.licenses=MIT
+
 RUN apt-get update \
-  && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates \
-  && rm -rf /var/lib/apt/lists/*
+    && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 # Set the locale
 RUN sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
-  && locale-gen
+    && locale-gen
 
 ENV LANG=en_US.UTF-8
 ENV LANGUAGE=en_US:en
