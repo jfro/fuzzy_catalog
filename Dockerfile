@@ -34,6 +34,7 @@ RUN mix local.hex --force \
 
 # set build ENV
 ENV MIX_ENV="prod"
+ENV UPLOAD_PATH="/app-uploads-covers"
 
 # install mix dependencies
 COPY mix.exs mix.lock ./
@@ -88,8 +89,12 @@ ENV LC_ALL=en_US.UTF-8
 WORKDIR "/app"
 RUN chown nobody /app
 
+# Create uploads directory and set ownership
+RUN mkdir -p /app-uploads-covers && chown nobody:root /app-uploads-covers
+
 # set runner ENV
 ENV MIX_ENV="prod"
+ENV UPLOAD_PATH="/app-uploads-covers"
 
 # Only copy the final release from the build stage
 COPY --from=builder --chown=nobody:root /app/_build/${MIX_ENV}/rel/fuzzy_catalog ./

@@ -64,6 +64,13 @@ if config_env() == :prod do
   # Calibre configuration
   config :fuzzy_catalog, :calibre, library_path: System.get_env("CALIBRE_LIBRARY_PATH")
 
+  # Storage configuration
+  config :fuzzy_catalog, :storage,
+    local: [
+      base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads",
+      base_url: "/uploads"
+    ]
+
   config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

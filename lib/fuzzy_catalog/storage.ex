@@ -161,7 +161,7 @@ defmodule FuzzyCatalog.Storage do
 
   defp generate_cover_key(extension) do
     uuid = Ecto.UUID.generate()
-    "#{uuid}#{extension}"
+    "covers/#{uuid}#{extension}"
   end
 
   defp determine_extension(content_type) do

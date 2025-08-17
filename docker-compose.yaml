@@ -1,8 +1,6 @@
 services:
   db:
     image: postgres:alpine
-    # ports:
-    #   - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -12,16 +10,14 @@ services:
     build:
       context: .
       dockerfile: ./Dockerfile
-
-    # volumes:
-    #   - .:/app
+    user: "65534:65534" # nobody user
+    volumes:
+      - uploads_covers:/app-uploads-covers
     ports:
       - "4000:4000"
     depends_on:
       - db
-    environment:
-      PHX_HOST: localhost
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/fuzzy_catalog
-      SECRET_KEY_BASE: bN9RtuJXk/KUF6swIIUHNxHDNgLd9DvWC7N+vdEdsieYKvYPLckU2q/40deQVy4K
+    env_file: .env.docker
 volumes:
   postgres_data:
+  uploads_covers:

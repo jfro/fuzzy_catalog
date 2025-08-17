@@ -20,7 +20,7 @@ defmodule FuzzyCatalog.Storage.Backends.LocalBackend do
 
     case File.write(file_path, content) do
       :ok ->
-        Logger.info("Stored file: #{key}")
+        Logger.info("Stored file: #{key} @ #{file_path}")
         {:ok, key}
 
       {:error, reason} ->

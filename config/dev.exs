@@ -107,6 +107,6 @@ config :fuzzy_catalog, :calibre, library_path: System.get_env("CALIBRE_LIBRARY_P
 # Storage configuration for development
 config :fuzzy_catalog, :storage,
   local: [
-    base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads/covers",
-    base_url: "/uploads/covers"
+    base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads",
+    base_url: "/uploads"
   ]

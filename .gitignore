@@ -38,5 +38,7 @@ fuzzy_catalog-*.tar
 npm-debug.log
 /assets/node_modules/
 
+.env
+.env.docker
 mise.local.toml
 /priv/Calibre Library/

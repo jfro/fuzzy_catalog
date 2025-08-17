@@ -36,8 +36,8 @@ config :fuzzy_catalog, :book_lookup,
 config :fuzzy_catalog, :storage,
   backend: FuzzyCatalog.Storage.Backends.LocalBackend,
   local: [
-    base_path: "priv/static/uploads/covers",
-    base_url: "/uploads/covers"
+    base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads",
+    base_url: "/uploads"
   ]
 
 # Configures the endpoint

@@ -19,7 +19,7 @@ defmodule FuzzyCatalogWeb.Endpoint do
   # This must come before the main static plug to handle uploads first
   plug Plug.Static,
     at: "/uploads",
-    from: {:fuzzy_catalog, "priv/static/uploads"},
+    from: System.get_env("UPLOAD_PATH") || "priv/static/uploads",
     gzip: false
 
   # Serve at "/" the static files from "priv/static" directory.
