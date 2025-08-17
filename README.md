@@ -1,5 +1,9 @@
 # FuzzyCatalog
 
+## Under Development
+
+This is still pretty heavily under development, but closing in on something I think I can personally use. I hope it may be useful to others who were looking for something to catalog their physical books & more with. Hopefully more to come!
+
 ## Features
 
 - Barcode scanning of physical books via keyboard input scanners (webcam one may still work but have not had much luck with it)
