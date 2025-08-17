@@ -1,5 +1,32 @@
 # FuzzyCatalog
 
+## Features
+
+- Barcode scanning of physical books via keyboard input scanners (webcam one may still work but have not had much luck with it)
+- Ability to sync with digital libraries, currently from Audiobookshelf (via API) & Calibre (via actual path to library files)
+- Adding books via title or ISBN pulls metadata from Open Library or Google Books (Library of Congress available but not sure it's worth using)
+
+## Environment Setup
+
+| Env | Usage |
+| --- | --- |
+| DATABASE_URL | REQUIRED postgres database URL, i.e.: ecto://user:password@host:port/database |
+| SECRET_KEY_BASE | REQUIRED random secret |
+| PHX_HOST | domain to use (i.e. localhost) |
+| PORT | port to use, default is 4000 |
+| AUDIOBOOKSHELF_URL | URL to an instance of Audiobookshelf for syncing |
+| AUDIOBOOKSHELF_API_KEY | API key for Audiobookshelf |
+| AUDIOBOOKSHELF_LIBRARIES | Comma separated list of library names to sync from Audiobookshelf |
+| CALIBRE_LIBRARY_PATH | Path to Calibre library files, including ebooks & metadata.db file |
+
+## Possible TODO
+
+- Expose mail sending configuration (Swoosh settings) to ENV
+- Support for other digital libraries like Kavita, Calibre-Web (OPDS), and more
+- Explore adding support for other physical items like movies or games
+
+## Local Dev
+
 To start your Phoenix server:
 
 * Run `mix setup` to install and setup dependencies
