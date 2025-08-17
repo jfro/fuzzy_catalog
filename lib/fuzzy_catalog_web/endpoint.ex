@@ -15,6 +15,13 @@ defmodule FuzzyCatalogWeb.Endpoint do
     websocket: [connect_info: [session: @session_options]],
     longpoll: [connect_info: [session: @session_options]]
 
+  # Serve user uploads without gzip compression
+  # This must come before the main static plug to handle uploads first
+  plug Plug.Static,
+    at: "/uploads",
+    from: {:fuzzy_catalog, "priv/static/uploads"},
+    gzip: false
+
   # Serve at "/" the static files from "priv/static" directory.
   #
   # When code reloading is disabled (e.g., in production),
