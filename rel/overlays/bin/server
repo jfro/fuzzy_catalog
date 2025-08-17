@@ -2,4 +2,6 @@
 set -eu
 
 cd -P -- "$(dirname -- "$0")"
+echo "Migrating before start..."
+./migrate
 PHX_SERVER=true exec ./fuzzy_catalog start

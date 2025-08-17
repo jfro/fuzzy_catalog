@@ -20,7 +20,7 @@ services:
     depends_on:
       - db
     environment:
-      PHX_HOST: localhost:4000
+      PHX_HOST: localhost
       DATABASE_URL: postgresql://postgres:postgres@db:5432/fuzzy_catalog
       SECRET_KEY_BASE: bN9RtuJXk/KUF6swIIUHNxHDNgLd9DvWC7N+vdEdsieYKvYPLckU2q/40deQVy4K
 volumes:
