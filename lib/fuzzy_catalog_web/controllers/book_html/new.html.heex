@@ -253,7 +253,7 @@
                     <p class="text-sm text-base-content/70">by {book.author}</p>
                     <%= if book.publication_date do %>
                       <p class="text-xs text-base-content/60">
-                        Published: {book.publication_date.year}
+                        Published: {format_publication_date(book.publication_date)}
                       </p>
                     <% end %>
                   </div>
@@ -274,7 +274,7 @@
             <p class="text-sm text-base-content/70">by {@lookup_results.author}</p>
             <%= if @lookup_results.publication_date do %>
               <p class="text-xs text-base-content/60">
-                Published: {@lookup_results.publication_date.year}
+                Published: {format_publication_date(@lookup_results.publication_date)}
               </p>
             <% end %>
             <.form :let={_f} for={%{}} action={~p"/books/new"} method="get" class="mt-2">

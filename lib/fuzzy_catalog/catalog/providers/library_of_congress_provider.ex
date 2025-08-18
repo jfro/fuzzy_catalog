@@ -233,7 +233,7 @@ defmodule FuzzyCatalog.Catalog.Providers.LibraryOfCongressProvider do
     case date_nodes do
       [date_node | _] ->
         date_string = extract_text_from_node(date_node)
-        parse_date(date_string)
+        FuzzyCatalog.DateUtils.parse_date(date_string)
 
       [] ->
         nil
@@ -294,20 +294,6 @@ defmodule FuzzyCatalog.Catalog.Providers.LibraryOfCongressProvider do
 
       [] ->
         nil
-    end
-  end
-
-  defp parse_date(date_string) when is_binary(date_string) do
-    case Date.from_iso8601(date_string) do
-      {:ok, date} ->
-        date
-
-      {:error, _} ->
-        # Try to parse just the year
-        case Regex.run(~r/\d{4}/, date_string) do
-          [year] -> Date.new!(String.to_integer(year), 1, 1)
-          _ -> nil
-        end
     end
   end
 

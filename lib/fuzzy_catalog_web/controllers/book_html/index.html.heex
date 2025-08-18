@@ -48,6 +48,40 @@
       </form>
 
       <div class="flex gap-2 items-center">
+        <!-- Sort Dropdown -->
+        <div class="dropdown dropdown-end">
+          <div tabindex="0" role="button" class="btn btn-outline btn-sm">
+            <.icon name="hero-arrows-up-down" class="h-4 w-4 mr-2" />
+            Sort: {current_sort_label(@meta)}
+            <.icon name="hero-chevron-down" class="h-3 w-3 ml-2" />
+          </div>
+          <ul
+            tabindex="0"
+            class="dropdown-content menu bg-base-100 rounded-box z-[1] w-60 p-2 shadow-lg border"
+          >
+            <%= for {label, field, direction} <- sort_options() do %>
+              <li>
+                <.link
+                  href={build_sort_url(@conn, @meta, field, direction)}
+                  class={[
+                    "flex items-center justify-between",
+                    if(current_sort(@meta) == {field, direction},
+                      do: "active font-semibold",
+                      else: ""
+                    )
+                  ]}
+                >
+                  <span>{label}</span>
+                  <%= if current_sort(@meta) == {field, direction} do %>
+                    <.icon name="hero-check" class="h-4 w-4" />
+                  <% end %>
+                </.link>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+        
+<!-- View Toggle -->
         <.link
           href={toggle_view_url(@conn, @meta, current_view_mode(assigns))}
           class="btn btn-outline btn-sm"
@@ -226,42 +260,22 @@
   <% end %>
 
   <div class="mt-6 flex justify-center">
-    <%= if current_view_mode(assigns) == "grid" do %>
-      <Flop.Phoenix.pagination
-        meta={@meta}
-        path={~p"/books?view=grid"}
-        page_links={5}
-        page_list_attrs={[class: "join"]}
-        page_list_item_attrs={[]}
-        page_link_attrs={[class: "join-item btn btn-outline"]}
-        current_page_link_attrs={[class: "join-item btn btn-active"]}
-        disabled_link_attrs={[class: "join-item btn btn-disabled"]}
-      >
-        <:previous attrs={[class: "join-item btn btn-outline"]}>
-          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
-        </:previous>
-        <:next attrs={[class: "join-item btn btn-outline"]}>
-          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
-        </:next>
-      </Flop.Phoenix.pagination>
-    <% else %>
-      <Flop.Phoenix.pagination
-        meta={@meta}
-        path={~p"/books"}
-        page_links={5}
-        page_list_attrs={[class: "join"]}
-        page_list_item_attrs={[]}
-        page_link_attrs={[class: "join-item btn btn-outline"]}
-        current_page_link_attrs={[class: "join-item btn btn-active"]}
-        disabled_link_attrs={[class: "join-item btn btn-disabled"]}
-      >
-        <:previous attrs={[class: "join-item btn btn-outline"]}>
-          <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
-        </:previous>
-        <:next attrs={[class: "join-item btn btn-outline"]}>
-          Next <.icon name="hero-chevron-right" class="h-4 w-4" />
-        </:next>
-      </Flop.Phoenix.pagination>
-    <% end %>
+    <Flop.Phoenix.pagination
+      meta={@meta}
+      path={pagination_path(@conn)}
+      page_links={5}
+      page_list_attrs={[class: "join"]}
+      page_list_item_attrs={[]}
+      page_link_attrs={[class: "join-item btn btn-outline"]}
+      current_page_link_attrs={[class: "join-item btn btn-active"]}
+      disabled_link_attrs={[class: "join-item btn btn-disabled"]}
+    >
+      <:previous attrs={[class: "join-item btn btn-outline"]}>
+        <.icon name="hero-chevron-left" class="h-4 w-4" /> Previous
+      </:previous>
+      <:next attrs={[class: "join-item btn btn-outline"]}>
+        Next <.icon name="hero-chevron-right" class="h-4 w-4" />
+      </:next>
+    </Flop.Phoenix.pagination>
   </div>
 </Layouts.app>

@@ -134,7 +134,7 @@ defmodule FuzzyCatalog.Catalog.Providers.GoogleBooksProvider do
       isbn10: isbn10,
       isbn13: isbn13,
       publisher: volume_info["publisher"],
-      publication_date: parse_google_date(volume_info["publishedDate"]),
+      publication_date: FuzzyCatalog.DateUtils.parse_date(volume_info["publishedDate"]),
       pages: volume_info["pageCount"],
       genre: List.first(volume_info["categories"] || []),
       description: volume_info["description"],
@@ -166,20 +166,4 @@ defmodule FuzzyCatalog.Catalog.Providers.GoogleBooksProvider do
   end
 
   defp extract_google_series(_), do: nil
-
-  defp parse_google_date(nil), do: nil
-
-  defp parse_google_date(date_string) when is_binary(date_string) do
-    case Date.from_iso8601(date_string) do
-      {:ok, date} ->
-        date
-
-      {:error, _} ->
-        # Try to parse just the year
-        case Regex.run(~r/\d{4}/, date_string) do
-          [year] -> Date.new!(String.to_integer(year), 1, 1)
-          _ -> nil
-        end
-    end
-  end
 end

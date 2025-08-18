@@ -22,7 +22,7 @@ defmodule FuzzyCatalog.Catalog.Book do
 
     # Publishing Information
     field :publisher, :string
-    field :publication_date, :date
+    field :publication_date, :string
     field :pages, :integer
     field :genre, :string
 
@@ -64,6 +64,7 @@ defmodule FuzzyCatalog.Catalog.Book do
     |> validate_length(:author, min: 1, max: 255)
     |> validate_number(:pages, greater_than: 0)
     |> validate_series_number()
+    |> validate_publication_date()
   end
 
   defp validate_series_number(changeset) do
@@ -75,4 +76,64 @@ defmodule FuzzyCatalog.Catalog.Book do
       end
     end)
   end
+
+  defp validate_publication_date(changeset) do
+    validate_change(changeset, :publication_date, fn :publication_date, publication_date ->
+      case parse_and_validate_iso_date(publication_date) do
+        {:ok, _} ->
+          []
+
+        :error ->
+          [
+            publication_date:
+              "must be a valid partial date (e.g., '2023', '2023-05', '2023-05-15')"
+          ]
+      end
+    end)
+  end
+
+  # Parse and validate ISO 8601 partial date strings
+  defp parse_and_validate_iso_date(nil), do: {:ok, nil}
+  defp parse_and_validate_iso_date(""), do: {:ok, nil}
+
+  defp parse_and_validate_iso_date(date_string) when is_binary(date_string) do
+    trimmed = String.trim(date_string)
+    current_year = Date.utc_today().year
+
+    case String.split(trimmed, "-") do
+      # Year only: "2023"
+      [year_str] when byte_size(year_str) == 4 ->
+        case Integer.parse(year_str) do
+          {year, ""} when year >= 1000 and year <= current_year + 10 -> {:ok, trimmed}
+          _ -> :error
+        end
+
+      # Year-month: "2023-05"
+      [year_str, month_str] when byte_size(year_str) == 4 and byte_size(month_str) == 2 ->
+        with {year, ""} <- Integer.parse(year_str),
+             {month, ""} <- Integer.parse(month_str),
+             true <- year >= 1000 and year <= current_year + 10,
+             true <- month >= 1 and month <= 12 do
+          {:ok, trimmed}
+        else
+          _ -> :error
+        end
+
+      # Full date: "2023-05-15"
+      [year_str, month_str, day_str]
+      when byte_size(year_str) == 4 and byte_size(month_str) == 2 and byte_size(day_str) == 2 ->
+        case Date.from_iso8601(trimmed) do
+          {:ok, %Date{year: year}} when year >= 1000 and year <= current_year + 10 ->
+            {:ok, trimmed}
+
+          _ ->
+            :error
+        end
+
+      _ ->
+        :error
+    end
+  end
+
+  defp parse_and_validate_iso_date(_), do: :error
 end

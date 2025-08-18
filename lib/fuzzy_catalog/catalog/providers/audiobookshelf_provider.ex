@@ -258,19 +258,9 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
       # Get cover URL - Audiobookshelf provides cover path
       cover_url = build_cover_url(item)
 
-      # Parse publication date
+      # Parse publication date using centralized DateUtils
       publication_date =
-        case metadata["publishedYear"] do
-          year when is_integer(year) and year > 0 ->
-            Date.new(year, 1, 1)
-            |> case do
-              {:ok, date} -> date
-              _ -> nil
-            end
-
-          _ ->
-            nil
-        end
+        FuzzyCatalog.DateUtils.parse_audiobookshelf_year(metadata["publishedYear"])
 
       # Parse series number
       series_number =

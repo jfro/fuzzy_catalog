@@ -259,20 +259,8 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     end)
   end
 
-  defp extract_publish_date(nil), do: nil
-
-  defp extract_publish_date(date) when is_binary(date) do
-    case Date.from_iso8601(date) do
-      {:ok, parsed_date} ->
-        parsed_date
-
-      {:error, _} ->
-        # Try to parse just the year if full date parsing fails
-        case Regex.run(~r/\d{4}/, date) do
-          [year] -> Date.new!(String.to_integer(year), 1, 1)
-          _ -> nil
-        end
-    end
+  defp extract_publish_date(date) do
+    FuzzyCatalog.DateUtils.parse_date(date)
   end
 
   defp extract_search_publish_date(doc) do
@@ -286,7 +274,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
       _ ->
         case doc["first_publish_year"] do
-          year when is_integer(year) -> Date.new!(year, 1, 1)
+          year when is_integer(year) -> FuzzyCatalog.DateUtils.parse_date(year)
           _ -> nil
         end
     end
