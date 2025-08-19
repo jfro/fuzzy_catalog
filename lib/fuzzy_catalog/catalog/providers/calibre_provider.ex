@@ -231,7 +231,7 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
       ] = row
 
       # Parse publication date
-      publication_date = parse_publication_date(pubdate)
+      publication_date = FuzzyCatalog.DateUtils.parse_calibre_date(pubdate)
 
       # Get additional identifiers
       {isbn10, isbn13, asin} = get_book_identifiers(db, book_id, isbn)
@@ -267,19 +267,6 @@ defmodule FuzzyCatalog.Catalog.Providers.CalibreProvider do
         nil
     end
   end
-
-  defp parse_publication_date(nil), do: nil
-  defp parse_publication_date(""), do: nil
-
-  defp parse_publication_date(pubdate) when is_binary(pubdate) do
-    # Calibre stores dates as ISO strings, sometimes with timezone
-    case Date.from_iso8601(String.slice(pubdate, 0, 10)) do
-      {:ok, date} -> date
-      {:error, _} -> nil
-    end
-  end
-
-  defp parse_publication_date(_), do: nil
 
   defp get_book_identifiers(db, book_id, main_isbn) do
     # Query identifiers table for additional ISBNs and ASINs

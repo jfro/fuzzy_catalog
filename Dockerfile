@@ -18,6 +18,13 @@ ARG DEBIAN_VERSION=bookworm-20250630-slim
 ARG BUILDER_IMAGE="docker.io/hexpm/elixir:${ELIXIR_VERSION}-erlang-${OTP_VERSION}-debian-${DEBIAN_VERSION}"
 ARG RUNNER_IMAGE="docker.io/debian:${DEBIAN_VERSION}"
 
+# standard Docker arguments
+ARG TARGETPLATFORM
+ARG BUILDPLATFORM
+# custom build arguments
+ARG BUILD_TIME
+ARG GITREF
+
 FROM ${BUILDER_IMAGE} AS builder
 
 # install build dependencies
@@ -73,6 +80,9 @@ FROM ${RUNNER_IMAGE} AS final
 
 LABEL org.opencontainers.image.source=https://github.com/jfro/fuzzy_catalog
 LABEL org.opencontainers.image.licenses=MIT
+
+# persist these build time arguments into container as debug
+RUN echo "[$BUILD_TIME] [$GITREF] building on host that is $BUILDPLATFORM, for the target architecture $TARGETPLATFORM" > /build.log
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates \

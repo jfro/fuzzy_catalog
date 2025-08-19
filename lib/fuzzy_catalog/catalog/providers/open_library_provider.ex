@@ -9,7 +9,6 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
   alias FuzzyCatalog.Catalog.BookLookupProvider
 
   @base_url "https://openlibrary.org"
-  @books_api_url "#{@base_url}/api/books"
   @search_api_url "#{@base_url}/search.json"
   @covers_api_url "https://covers.openlibrary.org"
 
@@ -19,12 +18,12 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
     case validate_isbn(clean_isbn) do
       :valid ->
-        bibkey = "ISBN:#{clean_isbn}"
-        url = "#{@books_api_url}?bibkeys=#{bibkey}&format=json&jscmd=data"
+        url =
+          "#{@search_api_url}?isbn=#{clean_isbn}&fields=title,author_name,first_publish_year,publish_date,isbn,publisher,key,subtitle,subject,format,editions&limit=1"
 
         case make_request(url) do
           {:ok, response} ->
-            parse_book_response(response, bibkey)
+            parse_isbn_search_response(response)
 
           {:error, reason} ->
             {:error, reason}
@@ -45,7 +44,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
         encoded_title = URI.encode(clean_title)
 
         url =
-          "#{@search_api_url}?title=#{encoded_title}&fields=title,author_name,first_publish_year,publish_date,isbn,publisher,key,subtitle,subject&limit=10"
+          "#{@search_api_url}?title=#{encoded_title}&fields=title,author_name,first_publish_year,publish_date,isbn,publisher,key,subtitle,subject,format&limit=10"
 
         case make_request(url) do
           {:ok, response} ->
@@ -63,7 +62,7 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
     if String.length(clean_upc) == 12 do
       url =
-        "#{@search_api_url}?q=#{clean_upc}&fields=title,author_name,first_publish_year,publish_date,isbn,publisher,key,subtitle,subject&limit=5"
+        "#{@search_api_url}?q=#{clean_upc}&fields=title,author_name,first_publish_year,publish_date,isbn,publisher,key,subtitle,subject,format&limit=5"
 
       case make_request(url) do
         {:ok, response} ->
@@ -81,6 +80,61 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
   def provider_name, do: "OpenLibrary"
 
   # Private functions
+
+  defp map_format_to_media_type(format) when is_binary(format) do
+    format_lower = String.downcase(String.trim(format))
+
+    cond do
+      String.contains?(format_lower, "hardcover") or String.contains?(format_lower, "hardback") ->
+        "hardcover"
+
+      String.contains?(format_lower, "paperback") or String.contains?(format_lower, "softcover") ->
+        "paperback"
+
+      String.contains?(format_lower, "audiobook") or String.contains?(format_lower, "audio") or
+        String.contains?(format_lower, "mp3") or String.contains?(format_lower, "cd") ->
+        "audiobook"
+
+      String.contains?(format_lower, "ebook") or String.contains?(format_lower, "e-book") or
+        String.contains?(format_lower, "digital") or String.contains?(format_lower, "epub") or
+          String.contains?(format_lower, "kindle") ->
+        "ebook"
+
+      true ->
+        nil
+    end
+  end
+
+  defp map_format_to_media_type(_), do: nil
+
+  defp extract_media_types_from_formats(nil), do: []
+  defp extract_media_types_from_formats([]), do: []
+
+  defp extract_media_types_from_formats(formats) when is_list(formats) do
+    formats
+    |> Enum.map(&map_format_to_media_type/1)
+    |> Enum.filter(& &1)
+    |> Enum.uniq()
+  end
+
+  defp extract_formats_from_editions(nil), do: []
+  defp extract_formats_from_editions(%{"docs" => []}), do: []
+
+  defp extract_formats_from_editions(%{"docs" => editions}) when is_list(editions) do
+    editions
+    |> Enum.flat_map(fn edition ->
+      case edition["format"] do
+        format when is_binary(format) -> [format]
+        formats when is_list(formats) -> formats
+        _ -> []
+      end
+    end)
+    |> Enum.map(&map_format_to_media_type/1)
+    |> Enum.filter(& &1)
+    |> Enum.uniq()
+  end
+
+  defp extract_formats_from_editions(_), do: []
 
   defp make_request(url) do
     Logger.info("OpenLibrary: Making request to: #{url}")
@@ -111,16 +165,6 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     end
   end
 
-  defp parse_book_response(response, bibkey) do
-    case response do
-      %{^bibkey => book_data} ->
-        {:ok, normalize_book_data(book_data)}
-
-      _ ->
-        {:error, "Book not found"}
-    end
-  end
-
   defp parse_search_response(%{"docs" => docs, "num_found" => num_found}) when num_found > 0 do
     books = Enum.map(docs, &normalize_search_result/1)
     {:ok, books}
@@ -134,25 +178,18 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     {:error, "Invalid response format"}
   end
 
-  defp normalize_book_data(data) do
-    isbn10 = extract_isbn(data, 10)
-    isbn13 = extract_isbn(data, 13)
+  defp parse_isbn_search_response(%{"docs" => [doc | _], "num_found" => num_found})
+       when num_found > 0 do
+    book_data = normalize_isbn_search_result(doc)
+    {:ok, book_data}
+  end
 
-    %{
-      title: get_in(data, ["title"]) || "Unknown Title",
-      author: extract_authors(get_in(data, ["authors"])),
-      isbn10: isbn10,
-      isbn13: isbn13,
-      publisher: extract_first_publisher(get_in(data, ["publishers"])),
-      publication_date: extract_publish_date(get_in(data, ["publish_date"])),
-      pages: get_in(data, ["number_of_pages"]),
-      cover_url: generate_cover_url(isbn13 || isbn10),
-      # New fields
-      subtitle: get_in(data, ["subtitle"]),
-      description: extract_description(data),
-      genre: extract_subjects(get_in(data, ["subjects"])),
-      series: extract_series(data)
-    }
+  defp parse_isbn_search_response(%{"num_found" => 0}) do
+    {:error, "Book not found"}
+  end
+
+  defp parse_isbn_search_response(_) do
+    {:error, "Invalid response format"}
   end
 
   defp normalize_search_result(doc) do
@@ -170,7 +207,31 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
       cover_url: generate_cover_url(isbn13 || isbn10),
       # New fields from search results
       subtitle: doc["subtitle"],
-      genre: extract_search_subjects(doc["subject"])
+      genre: extract_search_subjects(doc["subject"]),
+      suggested_media_types: extract_media_types_from_formats(doc["format"])
+    }
+  end
+
+  defp normalize_isbn_search_result(doc) do
+    isbn10 = extract_isbn_from_list(doc["isbn"], 10)
+    isbn13 = extract_isbn_from_list(doc["isbn"], 13)
+
+    # Extract format from editions if available
+    edition_formats = extract_formats_from_editions(doc["editions"])
+
+    %{
+      title: doc["title"] || "Unknown Title",
+      author: extract_author_names(doc["author_name"]),
+      isbn10: isbn10,
+      isbn13: isbn13,
+      publisher: List.first(doc["publisher"] || []),
+      publication_date: extract_search_publish_date(doc),
+      key: doc["key"],
+      cover_url: generate_cover_url(isbn13 || isbn10),
+      # New fields from search results
+      subtitle: doc["subtitle"],
+      genre: extract_search_subjects(doc["subject"]),
+      suggested_media_types: edition_formats
     }
   end
 
@@ -182,27 +243,11 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     "#{@covers_api_url}/b/isbn/#{clean_isbn}-M.jpg"
   end
 
-  defp extract_authors(nil), do: "Unknown Author"
-  defp extract_authors([]), do: "Unknown Author"
-
-  defp extract_authors(authors) when is_list(authors) do
-    authors
-    |> Enum.map(fn author -> author["name"] || "Unknown" end)
-    |> Enum.join(", ")
-  end
-
   defp extract_author_names(nil), do: "Unknown Author"
   defp extract_author_names([]), do: "Unknown Author"
 
   defp extract_author_names(names) when is_list(names) do
     Enum.join(names, ", ")
-  end
-
-  defp extract_isbn(data, length) do
-    case get_in(data, ["identifiers", "isbn_#{length}"]) do
-      [isbn | _] -> isbn
-      _ -> nil
-    end
   end
 
   defp extract_isbn_from_list(nil, _length), do: nil
@@ -214,31 +259,8 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     end)
   end
 
-  defp extract_first_publisher(nil), do: nil
-  defp extract_first_publisher([]), do: nil
-
-  defp extract_first_publisher([publisher | _]) when is_map(publisher) do
-    publisher["name"]
-  end
-
-  defp extract_first_publisher([publisher | _]) when is_binary(publisher) do
-    publisher
-  end
-
-  defp extract_publish_date(nil), do: nil
-
-  defp extract_publish_date(date) when is_binary(date) do
-    case Date.from_iso8601(date) do
-      {:ok, parsed_date} ->
-        parsed_date
-
-      {:error, _} ->
-        # Try to parse just the year if full date parsing fails
-        case Regex.run(~r/\d{4}/, date) do
-          [year] -> Date.new!(String.to_integer(year), 1, 1)
-          _ -> nil
-        end
-    end
+  defp extract_publish_date(date) do
+    FuzzyCatalog.DateUtils.parse_date(date)
   end
 
   defp extract_search_publish_date(doc) do
@@ -252,36 +274,9 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
 
       _ ->
         case doc["first_publish_year"] do
-          year when is_integer(year) -> Date.new!(year, 1, 1)
+          year when is_integer(year) -> FuzzyCatalog.DateUtils.parse_date(year)
           _ -> nil
         end
-    end
-  end
-
-  defp extract_description(data) do
-    case get_in(data, ["description"]) do
-      %{"value" => value} when is_binary(value) -> value
-      value when is_binary(value) -> value
-      _ -> nil
-    end
-  end
-
-  defp extract_subjects(nil), do: nil
-  defp extract_subjects([]), do: nil
-
-  defp extract_subjects(subjects) when is_list(subjects) do
-    subjects
-    # Limit to first 3 subjects
-    |> Enum.take(3)
-    |> Enum.map(fn
-      %{"name" => name} when is_binary(name) -> name
-      subject when is_binary(subject) -> subject
-      _ -> nil
-    end)
-    |> Enum.filter(& &1)
-    |> case do
-      [] -> nil
-      names -> Enum.join(names, ", ")
     end
   end
 
@@ -293,14 +288,5 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     # Limit to first 3 subjects
     |> Enum.take(3)
     |> Enum.join(", ")
-  end
-
-  defp extract_series(data) do
-    # OpenLibrary might have series info in different places
-    case get_in(data, ["series"]) do
-      [series | _] when is_binary(series) -> series
-      series when is_binary(series) -> series
-      _ -> nil
-    end
   end
 end

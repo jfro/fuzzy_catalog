@@ -106,7 +106,7 @@
           </:item>
           <:item :if={@book.publisher} title="Publisher">{@book.publisher}</:item>
           <:item :if={@book.publication_date} title="Publication Date">
-            {@book.publication_date}
+            {format_publication_date(@book.publication_date)}
           </:item>
           <:item :if={@book.pages} title="Pages">{@book.pages}</:item>
           <:item :if={@book.genre} title="Genre">{@book.genre}</:item>

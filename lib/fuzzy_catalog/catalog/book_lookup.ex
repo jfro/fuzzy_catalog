@@ -213,6 +213,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
     |> normalize_pages()
     |> normalize_series_number()
     |> normalize_cover_url()
+    |> normalize_suggested_media_types()
   end
 
   defp normalize_pages(%{pages: 0} = book_data), do: %{book_data | pages: nil}
@@ -234,4 +235,14 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   end
 
   defp normalize_cover_url(book_data), do: book_data
+
+  defp normalize_suggested_media_types(%{suggested_media_types: nil} = book_data),
+    do: %{book_data | suggested_media_types: []}
+
+  defp normalize_suggested_media_types(%{suggested_media_types: types} = book_data)
+       when is_list(types),
+       do: book_data
+
+  defp normalize_suggested_media_types(book_data),
+    do: Map.put(book_data, :suggested_media_types, [])
 end
