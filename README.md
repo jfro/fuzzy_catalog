@@ -1,5 +1,11 @@
 # FuzzyCatalog
 
+## About
+
+A book catalogging application that allows you to keep track of the books you own, both digital and physical.
+
+![screenshot of fuzzy catalog book list page](docs/book-list-ss.png "Book List Page")
+
 ## Under Development
 
 This is still pretty heavily under development, but closing in on something I think I can personally use. I hope it may be useful to others who were looking for something to catalog their physical books & more with. Hopefully more to come!
