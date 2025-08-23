@@ -116,6 +116,12 @@ defmodule FuzzyCatalogWeb.Layouts do
       </div>
     </main>
 
+    <footer class="container mx-auto px-4 py-4">
+      <div class="max-w-7xl mx-auto text-center">
+        <p class="text-xs text-base-content/60">v{app_version()}</p>
+      </div>
+    </footer>
+
     <.flash_group flash={@flash} />
     """
   end
@@ -171,5 +177,12 @@ defmodule FuzzyCatalogWeb.Layouts do
       </button>
     </div>
     """
+  end
+
+  defp app_version do
+    case Application.spec(:fuzzy_catalog, :vsn) do
+      vsn when is_list(vsn) -> List.to_string(vsn)
+      _ -> "unknown"
+    end
   end
 end

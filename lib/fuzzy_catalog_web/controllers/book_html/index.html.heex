@@ -135,7 +135,9 @@
                 {book.title}
               </h3>
               <p class="text-xs text-base-content/70 line-clamp-1 mb-2">
-                {book.author}
+                <.link navigate={~p"/author/#{URI.encode(book.author)}"} class="hover:text-primary">
+                  {book.author}
+                </.link>
               </p>
             </.link>
 
@@ -215,10 +217,16 @@
           field={:title}
           col_style="cursor-pointer hover:bg-base-200"
         >
-          <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
-            <div class="font-semibold">{book.title}</div>
-            <div class="text-sm text-base-content/70">{book.author}</div>
-          </.link>
+          <div>
+            <.link navigate={~p"/books/#{book}"} class="block hover:text-primary">
+              <div class="font-semibold">{book.title}</div>
+            </.link>
+            <div class="text-sm text-base-content/70">
+              <.link navigate={~p"/author/#{URI.encode(book.author)}"} class="hover:text-primary">
+                {book.author}
+              </.link>
+            </div>
+          </div>
         </:col>
         <:col :let={book} label="Media Types">
           <div class="flex flex-wrap gap-1">

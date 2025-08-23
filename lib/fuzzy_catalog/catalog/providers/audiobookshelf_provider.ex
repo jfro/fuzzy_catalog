@@ -255,6 +255,11 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
          media when is_map(media) <- Map.get(item, "media") do
       metadata = Map.get(media, "metadata", %{})
 
+      # Debug logging to see actual Audiobookshelf metadata structure
+      Logger.debug(
+        "Audiobookshelf metadata for '#{metadata["title"] || "Unknown"}': #{inspect(metadata, pretty: true)}"
+      )
+
       # Get cover URL - Audiobookshelf provides cover path
       cover_url = build_cover_url(item)
 
@@ -262,21 +267,8 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
       publication_date =
         FuzzyCatalog.DateUtils.parse_audiobookshelf_year(metadata["publishedYear"])
 
-      # Parse series number
-      series_number =
-        case metadata["seriesSequence"] do
-          sequence when is_binary(sequence) ->
-            case Integer.parse(sequence) do
-              {num, _} -> num
-              :error -> nil
-            end
-
-          sequence when is_integer(sequence) ->
-            sequence
-
-          _ ->
-            nil
-        end
+      # Extract series name and number using new unified approach
+      {series_name, series_number} = extract_series_data_unified(metadata)
 
       # Separate ISBN and ASIN data properly
       {isbn10, isbn13, asin} = parse_isbn_asin_data(metadata)
@@ -294,7 +286,7 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
         subtitle: metadata["subtitle"],
         description: metadata["description"],
         genre: format_genres(metadata["genres"] || []),
-        series: format_series(metadata["series"] || []),
+        series: series_name,
         series_number: series_number,
         original_title: nil,
         media_type: map_audiobookshelf_media_type(library_media_type),
@@ -342,16 +334,89 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
 
   defp format_genres(_), do: nil
 
-  defp format_series([]), do: nil
+  # Parse Audiobookshelf seriesName field in format "Series Name #Number"
+  defp parse_series_name_field(nil), do: {nil, nil}
+  defp parse_series_name_field(""), do: {nil, nil}
 
-  defp format_series(series) when is_list(series) do
-    case Enum.find(series, fn s -> is_map(s) and Map.has_key?(s, "name") end) do
-      %{"name" => name} -> name
-      _ -> nil
+  defp parse_series_name_field(series_name) when is_binary(series_name) do
+    trimmed = String.trim(series_name)
+
+    case String.split(trimmed, " #", parts: 2) do
+      # Format: "Series Name #Number"
+      [series_part, number_part] when series_part != "" ->
+        series = String.trim(series_part)
+        number = parse_number_from_string(number_part)
+        {series, number}
+
+      # Format: just "Series Name" (no number)
+      [series_part] when series_part != "" ->
+        {String.trim(series_part), nil}
+
+      # Empty or malformed
+      _ ->
+        {nil, nil}
     end
   end
 
-  defp format_series(_), do: nil
+  # Unified series data extraction - tries seriesName first, fallback to old logic
+  defp extract_series_data_unified(metadata) do
+    try do
+      # First priority: parse seriesName field (actual Audiobookshelf API behavior)
+      case metadata["seriesName"] do
+        series_name when is_binary(series_name) and series_name != "" ->
+          {name, number} = parse_series_name_field(series_name)
+
+          if name do
+            Logger.debug(
+              "Extracted series from seriesName '#{series_name}': name='#{name}', number=#{inspect(number)}"
+            )
+
+            {name, number}
+          else
+            # seriesName exists but couldn't parse it, try fallback
+            {nil, nil}
+          end
+
+        _ ->
+          # No seriesName field, try fallback
+          {nil, nil}
+      end
+    rescue
+      error ->
+        Logger.warning("Error in unified series extraction: #{inspect(error)}")
+        {nil, nil}
+    end
+  end
+
+  # Parse numeric value from string, handling various formats
+  defp parse_number_from_string(str) when is_binary(str) do
+    cleaned = String.trim(str)
+
+    cond do
+      cleaned == "" ->
+        nil
+
+      # Try integer parsing first
+      match = Regex.run(~r/^(\d+)/, cleaned) ->
+        case match do
+          [_, num_str] ->
+            case Integer.parse(num_str) do
+              {num, _} -> num
+              :error -> nil
+            end
+
+          _ ->
+            nil
+        end
+
+      # Try float parsing as fallback
+      true ->
+        case Float.parse(cleaned) do
+          {num, _} -> round(num)
+          :error -> nil
+        end
+    end
+  end
 
   defp parse_isbn_asin_data(metadata) do
     # Use the centralized ISBN utils to parse identifiers

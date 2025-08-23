@@ -300,4 +300,42 @@ defmodule FuzzyCatalog.Catalog do
         book
     end
   end
+
+  @doc """
+  Gets all books in a series, ordered by series number.
+
+  ## Examples
+
+      iex> get_books_by_series("The Lord of the Rings")
+      [%Book{series_number: 1}, %Book{series_number: 2}, ...]
+
+      iex> get_books_by_series("Nonexistent Series")
+      []
+
+  """
+  def get_books_by_series(series_name) when is_binary(series_name) do
+    from(b in Book)
+    |> where([b], b.series == ^series_name)
+    |> order_by([b], asc: b.series_number, asc: b.title)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets all books by an author, ordered by title.
+
+  ## Examples
+
+      iex> get_books_by_author("J.K. Rowling")
+      [%Book{title: "Harry Potter and..."}, %Book{title: "The Casual Vacancy"}, ...]
+
+      iex> get_books_by_author("Nonexistent Author")
+      []
+
+  """
+  def get_books_by_author(author_name) when is_binary(author_name) do
+    from(b in Book)
+    |> where([b], b.author == ^author_name)
+    |> order_by([b], asc: b.title)
+    |> Repo.all()
+  end
 end

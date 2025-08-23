@@ -1,0 +1,91 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.header>
+    {@series_name} Series
+    <:subtitle>{length(@books)} books in series</:subtitle>
+    <:actions>
+      <.link href={~p"/books"}>
+        <.button>Back to library</.button>
+      </.link>
+    </:actions>
+  </.header>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div :for={book <- @books} class="bg-base-100 rounded-lg shadow-sm border p-4">
+      <!-- Book Cover -->
+      <div class="mb-4">
+        <%= cond do %>
+          <% book.cover_image_key && match?({:ok, _}, FuzzyCatalog.Storage.get_cover_url(book.cover_image_key)) -> %>
+            <.link navigate={~p"/books/#{book}"}>
+              <img
+                src={FuzzyCatalog.Storage.get_cover_url(book.cover_image_key) |> elem(1)}
+                alt={"Cover of #{book.title}"}
+                class="w-full aspect-[2/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+              />
+              <div class="w-full aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center hidden">
+                <div class="text-center">
+                  <.icon name="hero-book-open" class="h-8 w-8 text-base-content/50 mx-auto mb-2" />
+                  <div class="text-xs text-base-content/60">Cover not found</div>
+                </div>
+              </div>
+            </.link>
+          <% cover_url = FuzzyCatalog.Catalog.BookLookup.cover_url(book.isbn13 || book.isbn10, :medium) -> %>
+            <.link navigate={~p"/books/#{book}"}>
+              <img
+                src={cover_url}
+                alt={"Cover of #{book.title}"}
+                class="w-full aspect-[2/3] object-cover rounded-lg cursor-pointer hover:opacity-80 transition-opacity"
+                onerror="this.style.display='none'; this.nextElementSibling.style.display='block';"
+              />
+              <div class="w-full aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center hidden">
+                <div class="text-center">
+                  <.icon name="hero-book-open" class="h-8 w-8 text-base-content/50 mx-auto mb-2" />
+                  <div class="text-xs text-base-content/60">No cover available</div>
+                </div>
+              </div>
+            </.link>
+          <% true -> %>
+            <.link navigate={~p"/books/#{book}"}>
+              <div class="w-full aspect-[2/3] bg-base-200 rounded-lg flex items-center justify-center cursor-pointer hover:bg-base-300 transition-colors">
+                <div class="text-center">
+                  <.icon name="hero-book-open" class="h-8 w-8 text-base-content/50 mx-auto mb-2" />
+                  <div class="text-xs text-base-content/60">No cover available</div>
+                </div>
+              </div>
+            </.link>
+        <% end %>
+      </div>
+      
+<!-- Book Info -->
+      <div class="space-y-2">
+        <div class="flex items-start justify-between">
+          <.link
+            navigate={~p"/books/#{book}"}
+            class="font-semibold text-base leading-tight hover:text-primary transition-colors line-clamp-2 flex-1"
+          >
+            {book.title}
+          </.link>
+          <span
+            :if={book.series_number}
+            class="ml-2 text-sm font-medium text-base-content/70 shrink-0"
+          >
+            #{book.series_number}
+          </span>
+        </div>
+
+        <p class="text-sm text-base-content/70 line-clamp-1">{book.author}</p>
+
+        <p :if={book.publication_date} class="text-xs text-base-content/50">
+          {book.publication_date}
+        </p>
+      </div>
+    </div>
+  </div>
+  
+<!-- Empty state -->
+  <div :if={length(@books) == 0} class="text-center py-12">
+    <.icon name="hero-book-open" class="h-16 w-16 text-base-content/30 mx-auto mb-4" />
+    <h3 class="text-lg font-medium text-base-content/60 mb-2">No books found</h3>
+    <p class="text-base-content/50">There are no books in the '{@series_name}' series.</p>
+  </div>
+</Layouts.app>
