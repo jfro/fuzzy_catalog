@@ -65,6 +65,7 @@ defmodule FuzzyCatalogWeb.Router do
     resources "/books", BookController
     post "/books/:book_id/add_media_type", BookController, :add_media_type
     delete "/books/:book_id/remove_media_type", BookController, :remove_media_type
+    get "/series/:name", SeriesController, :show
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
