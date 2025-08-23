@@ -171,8 +171,6 @@ defmodule FuzzyCatalog.Catalog.Providers.OpenLibraryProvider do
     end
   end
 
-  defp fetch_edition_data(_), do: {:error, "Invalid edition key"}
-
   # Extract series data from edition JSON response
   defp extract_series_from_edition(edition_data) when is_map(edition_data) do
     # Edition JSON can have series data in multiple formats

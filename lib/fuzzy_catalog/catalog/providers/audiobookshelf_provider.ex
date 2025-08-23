@@ -335,7 +335,6 @@ defmodule FuzzyCatalog.Catalog.Providers.AudiobookshelfProvider do
   defp format_genres(_), do: nil
 
   # Parse Audiobookshelf seriesName field in format "Series Name #Number"
-  defp parse_series_name_field(nil), do: {nil, nil}
   defp parse_series_name_field(""), do: {nil, nil}
 
   defp parse_series_name_field(series_name) when is_binary(series_name) do
