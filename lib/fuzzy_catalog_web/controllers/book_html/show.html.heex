@@ -98,7 +98,11 @@
         <h3 class="text-lg font-semibold mb-4">Book Information</h3>
         <.list>
           <:item title="Title">{@book.title}</:item>
-          <:item title="Author">{@book.author}</:item>
+          <:item title="Author">
+            <.link navigate={~p"/author/#{URI.encode(@book.author)}"} class="link link-primary">
+              {@book.author}
+            </.link>
+          </:item>
           <:item :if={@book.subtitle} title="Subtitle">{@book.subtitle}</:item>
           <:item :if={@book.series} title="Series">
             <.link navigate={~p"/series/#{URI.encode(@book.series)}"} class="link link-primary">
