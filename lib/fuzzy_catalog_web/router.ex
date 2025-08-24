@@ -70,6 +70,8 @@ defmodule FuzzyCatalogWeb.Router do
     get "/users/settings", UserSettingsController, :edit
     put "/users/settings", UserSettingsController, :update
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
+    post "/users/settings/confirm-account", UserSettingsController, :send_confirmation
+    get "/users/settings/confirm-account/:token", UserSettingsController, :confirm_account
   end
 
   scope "/admin", FuzzyCatalogWeb do

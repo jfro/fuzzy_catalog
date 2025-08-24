@@ -135,7 +135,10 @@
                 {book.title}
               </h3>
               <p class="text-xs text-base-content/70 line-clamp-1 mb-2">
-                <.link navigate={~p"/author/#{URI.encode(book.author)}"} class="hover:text-primary">
+                <.link
+                  navigate={~p"/author/#{URI.encode(book.author)}"}
+                  class="hover:text-primary"
+                >
                   {book.author}
                 </.link>
               </p>

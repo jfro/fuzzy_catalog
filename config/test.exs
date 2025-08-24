@@ -26,6 +26,11 @@ config :fuzzy_catalog, FuzzyCatalogWeb.Endpoint,
 # In test we don't send emails
 config :fuzzy_catalog, FuzzyCatalog.Mailer, adapter: Swoosh.Adapters.Test
 
+# Email configuration for tests
+config :fuzzy_catalog, :email,
+  from_name: "Test App",
+  from_address: "test@example.com"
+
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
 

@@ -6,10 +6,13 @@ defmodule FuzzyCatalog.Accounts.UserNotifier do
 
   # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
+    from_name = Application.get_env(:fuzzy_catalog, :email)[:from_name]
+    from_address = Application.get_env(:fuzzy_catalog, :email)[:from_address]
+
     email =
       new()
       |> to(recipient)
-      |> from({"FuzzyCatalog", "contact@example.com"})
+      |> from({from_name, from_address})
       |> subject(subject)
       |> text_body(body)
 
@@ -46,6 +49,26 @@ defmodule FuzzyCatalog.Accounts.UserNotifier do
       %User{confirmed_at: nil} -> deliver_confirmation_instructions(user, url)
       _ -> deliver_magic_link_instructions(user, url)
     end
+  end
+
+  @doc """
+  Deliver account confirmation instructions to a logged-in user.
+  """
+  def deliver_user_confirmation_instructions(user, url) do
+    deliver(user.email, "Confirm your account", """
+
+    ==============================
+
+    Hi #{user.email},
+
+    Please confirm your account by visiting the URL below:
+
+    #{url}
+
+    If you didn't create this account, please ignore this email.
+
+    ==============================
+    """)
   end
 
   defp deliver_magic_link_instructions(user, url) do
