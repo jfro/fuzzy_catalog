@@ -117,19 +117,84 @@ if config_env() == :prod do
 
   # ## Configuring the mailer
   #
-  # In production you need to configure the mailer to use a different adapter.
-  # Here is an example configuration for Mailgun:
-  #
-  #     config :fuzzy_catalog, FuzzyCatalog.Mailer,
-  #       adapter: Swoosh.Adapters.Mailgun,
-  #       api_key: System.get_env("MAILGUN_API_KEY"),
-  #       domain: System.get_env("MAILGUN_DOMAIN")
-  #
-  # Most non-SMTP adapters require an API client. Swoosh supports Req, Hackney,
-  # and Finch out-of-the-box. This configuration is typically done at
-  # compile-time in your config/prod.exs:
-  #
-  #     config :swoosh, :api_client, Swoosh.ApiClient.Req
-  #
-  # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
+  # Configure mailer adapter based on environment variables.
+  # Supports Local (default), Mailgun, and SMTP adapters.
+
+  mailer_adapter = System.get_env("MAILER_ADAPTER", "local")
+
+  case String.downcase(mailer_adapter) do
+    "mailgun" ->
+      mailgun_api_key =
+        System.get_env("MAILGUN_API_KEY") ||
+          raise """
+          environment variable MAILGUN_API_KEY is missing.
+          This is required when MAILER_ADAPTER is set to "mailgun".
+          """
+
+      mailgun_domain =
+        System.get_env("MAILGUN_DOMAIN") ||
+          raise """
+          environment variable MAILGUN_DOMAIN is missing.
+          This is required when MAILER_ADAPTER is set to "mailgun".
+          """
+
+      config :fuzzy_catalog, FuzzyCatalog.Mailer,
+        adapter: Swoosh.Adapters.Mailgun,
+        api_key: mailgun_api_key,
+        domain: mailgun_domain
+
+      config :swoosh, :api_client, Swoosh.ApiClient.Req
+
+    "smtp" ->
+      smtp_relay =
+        System.get_env("SMTP_RELAY") ||
+          raise """
+          environment variable SMTP_RELAY is missing.
+          This is required when MAILER_ADAPTER is set to "smtp".
+          """
+
+      smtp_username =
+        System.get_env("SMTP_USERNAME") ||
+          raise """
+          environment variable SMTP_USERNAME is missing.
+          This is required when MAILER_ADAPTER is set to "smtp".
+          """
+
+      smtp_password =
+        System.get_env("SMTP_PASSWORD") ||
+          raise """
+          environment variable SMTP_PASSWORD is missing.
+          This is required when MAILER_ADAPTER is set to "smtp".
+          """
+
+      smtp_port = String.to_integer(System.get_env("SMTP_PORT", "587"))
+      smtp_ssl = System.get_env("SMTP_SSL", "false") in ~w(true 1)
+
+      smtp_tls =
+        case System.get_env("SMTP_TLS", "if_available") do
+          "always" -> :always
+          "never" -> :never
+          _ -> :if_available
+        end
+
+      config :fuzzy_catalog, FuzzyCatalog.Mailer,
+        adapter: Swoosh.Adapters.SMTP,
+        relay: smtp_relay,
+        port: smtp_port,
+        username: smtp_username,
+        password: smtp_password,
+        ssl: smtp_ssl,
+        tls: smtp_tls
+
+    "local" ->
+      config :fuzzy_catalog, FuzzyCatalog.Mailer, adapter: Swoosh.Adapters.Local
+
+    _ ->
+      raise """
+      Invalid MAILER_ADAPTER value: #{mailer_adapter}
+      Supported values are: "local", "mailgun", "smtp"
+      """
+  end
 end
+
+# end if prod
