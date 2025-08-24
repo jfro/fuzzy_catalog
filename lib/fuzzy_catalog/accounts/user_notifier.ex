@@ -48,6 +48,26 @@ defmodule FuzzyCatalog.Accounts.UserNotifier do
     end
   end
 
+  @doc """
+  Deliver account confirmation instructions to a logged-in user.
+  """
+  def deliver_user_confirmation_instructions(user, url) do
+    deliver(user.email, "Confirm your account", """
+
+    ==============================
+
+    Hi #{user.email},
+
+    Please confirm your account by visiting the URL below:
+
+    #{url}
+
+    If you didn't create this account, please ignore this email.
+
+    ==============================
+    """)
+  end
+
   defp deliver_magic_link_instructions(user, url) do
     deliver(user.email, "Log in instructions", """
 

@@ -103,6 +103,9 @@ defmodule FuzzyCatalog.Accounts do
 
   @doc """
   Creates a user by admin with specified role and status.
+  
+  Note: Users created with passwords will be unconfirmed and need to
+  confirm their accounts via email after logging in.
   """
   def create_user_by_admin(attrs) do
     %User{}
@@ -301,6 +304,36 @@ defmodule FuzzyCatalog.Accounts do
     {encoded_token, user_token} = UserToken.build_email_token(user, "login")
     Repo.insert!(user_token)
     UserNotifier.deliver_login_instructions(user, magic_link_url_fun.(encoded_token))
+  end
+
+  @doc """
+  Delivers account confirmation instructions to a logged-in user.
+  """
+  def deliver_user_confirmation_instructions(%User{} = user, confirmation_url_fun)
+      when is_function(confirmation_url_fun, 1) do
+    if user.confirmed_at do
+      {:error, :already_confirmed}
+    else
+      {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
+      Repo.insert!(user_token)
+      UserNotifier.deliver_user_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+    end
+  end
+
+  @doc """
+  Confirms a user account using the given token.
+  This is for users who are already logged in and confirming their account.
+  """
+  def confirm_user(token) do
+    with {:ok, query} <- UserToken.verify_email_token_query(token, "confirm"),
+         %UserToken{user_id: user_id} <- Repo.one(query),
+         %User{} = user <- get_user!(user_id),
+         {:ok, user} <- Repo.update(User.confirm_changeset(user)) do
+      Repo.delete_all(from(UserToken, where: [user_id: ^user_id, context: "confirm"]))
+      {:ok, user}
+    else
+      _ -> {:error, :invalid_token}
+    end
   end
 
   @doc """

@@ -6,6 +6,40 @@
     </.header>
   </div>
 
+  <!-- Account Confirmation Status -->
+  <div class="bg-gray-50 rounded-lg p-4 border">
+    <h3 class="font-medium text-gray-900">Account Confirmation</h3>
+    <%= if @current_scope.user.confirmed_at do %>
+      <p class="text-green-700 flex items-center mt-2">
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+        Your account is confirmed
+      </p>
+      <p class="text-sm text-gray-600 mt-1">
+        Confirmed on <%= Calendar.strftime(@current_scope.user.confirmed_at, "%B %d, %Y") %>
+      </p>
+    <% else %>
+      <p class="text-amber-700 flex items-center mt-2">
+        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+        </svg>
+        Your account needs confirmation
+      </p>
+      <p class="text-sm text-gray-600 mt-1 mb-3">
+        Some features may be limited until you confirm your account.
+      </p>
+      <form action={~p"/users/settings/confirm-account"} method="post">
+        <input type="hidden" name="_csrf_token" value={get_csrf_token()} />
+        <.button type="submit" class="bg-gray-600 hover:bg-gray-700 text-sm px-3 py-2">
+          Send Confirmation Email
+        </.button>
+      </form>
+    <% end %>
+  </div>
+
+  <div class="divider" />
+
   <.form :let={f} for={@email_changeset} action={~p"/users/settings"} id="update_email">
     <input type="hidden" name="action" value="update_email" />
 

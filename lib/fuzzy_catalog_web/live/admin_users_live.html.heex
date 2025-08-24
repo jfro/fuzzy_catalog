@@ -112,6 +112,20 @@
             />
           </div>
 
+          <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <div class="flex">
+              <svg class="flex-shrink-0 w-5 h-5 text-blue-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+              </svg>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-blue-800">Account Confirmation Required</h3>
+                <div class="mt-1 text-sm text-blue-700">
+                  <p>Users created with passwords will need to confirm their accounts via email after logging in. They can do this from their account settings page.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <.input
               field={f[:role]}
@@ -164,6 +178,9 @@
               Status
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Confirmed
+            </th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Created
             </th>
             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -175,14 +192,7 @@
           <%= for user <- @users do %>
             <tr>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div>
-                  <div class="text-sm font-medium text-gray-900">{user.email}</div>
-                  <%= if user.confirmed_at do %>
-                    <div class="text-xs text-green-600">Confirmed</div>
-                  <% else %>
-                    <div class="text-xs text-yellow-600">Unconfirmed</div>
-                  <% end %>
-                </div>
+                <div class="text-sm font-medium text-gray-900">{user.email}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class={[
@@ -205,6 +215,17 @@
                 ]}>
                   {String.capitalize(user.status)}
                 </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                <%= if user.confirmed_at do %>
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                    Confirmed
+                  </span>
+                <% else %>
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                    Unconfirmed
+                  </span>
+                <% end %>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                 {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}

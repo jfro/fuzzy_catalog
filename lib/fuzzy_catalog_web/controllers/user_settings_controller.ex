@@ -67,6 +67,42 @@ defmodule FuzzyCatalogWeb.UserSettingsController do
     end
   end
 
+  def send_confirmation(conn, _params) do
+    user = conn.assigns.current_scope.user
+
+    case Accounts.deliver_user_confirmation_instructions(
+           user,
+           &url(~p"/users/settings/confirm-account/#{&1}")
+         ) do
+      {:ok, _} ->
+        conn
+        |> put_flash(
+          :info,
+          "A confirmation link has been sent to #{user.email}."
+        )
+        |> redirect(to: ~p"/users/settings")
+
+      {:error, :already_confirmed} ->
+        conn
+        |> put_flash(:info, "Your account is already confirmed.")
+        |> redirect(to: ~p"/users/settings")
+    end
+  end
+
+  def confirm_account(conn, %{"token" => token}) do
+    case Accounts.confirm_user(token) do
+      {:ok, _user} ->
+        conn
+        |> put_flash(:info, "Your account has been confirmed successfully.")
+        |> redirect(to: ~p"/users/settings")
+
+      {:error, _} ->
+        conn
+        |> put_flash(:error, "Confirmation link is invalid or has expired.")
+        |> redirect(to: ~p"/users/settings")
+    end
+  end
+
   defp assign_email_and_password_changesets(conn, _opts) do
     user = conn.assigns.current_scope.user
 
