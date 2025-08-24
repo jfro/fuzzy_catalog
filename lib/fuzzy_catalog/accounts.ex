@@ -103,7 +103,7 @@ defmodule FuzzyCatalog.Accounts do
 
   @doc """
   Creates a user by admin with specified role and status.
-  
+
   Note: Users created with passwords will be unconfirmed and need to
   confirm their accounts via email after logging in.
   """
@@ -316,7 +316,11 @@ defmodule FuzzyCatalog.Accounts do
     else
       {encoded_token, user_token} = UserToken.build_email_token(user, "confirm")
       Repo.insert!(user_token)
-      UserNotifier.deliver_user_confirmation_instructions(user, confirmation_url_fun.(encoded_token))
+
+      UserNotifier.deliver_user_confirmation_instructions(
+        user,
+        confirmation_url_fun.(encoded_token)
+      )
     end
   end
 

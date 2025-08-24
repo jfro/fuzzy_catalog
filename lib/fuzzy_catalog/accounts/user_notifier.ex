@@ -8,7 +8,7 @@ defmodule FuzzyCatalog.Accounts.UserNotifier do
   defp deliver(recipient, subject, body) do
     from_name = Application.get_env(:fuzzy_catalog, :email)[:from_name]
     from_address = Application.get_env(:fuzzy_catalog, :email)[:from_address]
-    
+
     email =
       new()
       |> to(recipient)

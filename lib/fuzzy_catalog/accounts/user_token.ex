@@ -154,7 +154,7 @@ defmodule FuzzyCatalog.Accounts.UserToken do
   Checks if the token is valid and returns its underlying lookup query.
 
   The query returns the user_token found by the token, if any.
-  
+
   This is used to validate generic email tokens like confirmation tokens.
   The given token is valid if it matches its hashed counterpart in the
   database and if it has not expired (after @change_email_validity_in_days).
