@@ -195,6 +195,11 @@ if config_env() == :prod do
       Supported values are: "local", "mailgun", "smtp"
       """
   end
+
+  # Configure email sender information
+  config :fuzzy_catalog, :email,
+    from_name: System.get_env("EMAIL_FROM_NAME", "FuzzyCatalog"),
+    from_address: System.get_env("EMAIL_FROM_ADDRESS", "noreply@localhost")
 end
 
 # end if prod
