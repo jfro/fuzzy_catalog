@@ -5,6 +5,8 @@ defmodule FuzzyCatalogWeb.Layouts do
   """
   use FuzzyCatalogWeb, :html
 
+  alias FuzzyCatalog.AdminSettings
+
   # Embed all files in layouts/* within this module.
   # The default root.html.heex file contains the HTML
   # skeleton of your application, namely HTML headers
@@ -100,11 +102,13 @@ defmodule FuzzyCatalogWeb.Layouts do
                 <.icon name="hero-arrow-right-on-rectangle" class="h-4 w-4 mr-1" /> Log in
               </.link>
             </li>
-            <li>
-              <.link href={~p"/users/register"} class="btn btn-primary">
-                <.icon name="hero-user-plus" class="h-4 w-4 mr-1" /> Register
-              </.link>
-            </li>
+            <%= if AdminSettings.registration_enabled?() do %>
+              <li>
+                <.link href={~p"/users/register"} class="btn btn-primary">
+                  <.icon name="hero-user-plus" class="h-4 w-4 mr-1" /> Register
+                </.link>
+              </li>
+            <% end %>
           <% end %>
         </ul>
       </div>

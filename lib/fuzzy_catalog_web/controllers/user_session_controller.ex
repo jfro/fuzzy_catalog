@@ -2,13 +2,14 @@ defmodule FuzzyCatalogWeb.UserSessionController do
   use FuzzyCatalogWeb, :controller
 
   alias FuzzyCatalog.Accounts
+  alias FuzzyCatalog.AdminSettings
   alias FuzzyCatalogWeb.UserAuth
 
   def new(conn, _params) do
     email = get_in(conn.assigns, [:current_scope, Access.key(:user), Access.key(:email)])
     form = Phoenix.Component.to_form(%{"email" => email}, as: "user")
 
-    render(conn, :new, form: form)
+    render(conn, :new, form: form, registration_enabled: AdminSettings.registration_enabled?())
   end
 
   # magic link login
@@ -28,13 +29,19 @@ defmodule FuzzyCatalogWeb.UserSessionController do
         else
           conn
           |> put_flash(:error, "Your account has been disabled. Please contact an administrator.")
-          |> render(:new, form: Phoenix.Component.to_form(%{}, as: "user"))
+          |> render(:new,
+            form: Phoenix.Component.to_form(%{}, as: "user"),
+            registration_enabled: AdminSettings.registration_enabled?()
+          )
         end
 
       {:error, :not_found} ->
         conn
         |> put_flash(:error, "The link is invalid or it has expired.")
-        |> render(:new, form: Phoenix.Component.to_form(%{}, as: "user"))
+        |> render(:new,
+          form: Phoenix.Component.to_form(%{}, as: "user"),
+          registration_enabled: AdminSettings.registration_enabled?()
+        )
     end
   end
 
@@ -50,7 +57,7 @@ defmodule FuzzyCatalogWeb.UserSessionController do
 
         conn
         |> put_flash(:error, "Your account has been disabled. Please contact an administrator.")
-        |> render(:new, form: form)
+        |> render(:new, form: form, registration_enabled: AdminSettings.registration_enabled?())
       end
     else
       form = Phoenix.Component.to_form(user_params, as: "user")
@@ -58,7 +65,7 @@ defmodule FuzzyCatalogWeb.UserSessionController do
       # In order to prevent user enumeration attacks, don't disclose whether the email is registered.
       conn
       |> put_flash(:error, "Invalid email or password")
-      |> render(:new, form: form)
+      |> render(:new, form: form, registration_enabled: AdminSettings.registration_enabled?())
     end
   end
 
