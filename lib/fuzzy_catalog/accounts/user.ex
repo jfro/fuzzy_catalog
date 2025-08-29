@@ -10,6 +10,9 @@ defmodule FuzzyCatalog.Accounts.User do
     field :authenticated_at, :utc_datetime, virtual: true
     field :role, :string, default: "user"
     field :status, :string, default: "active"
+    field :provider, :string
+    field :provider_uid, :string
+    field :provider_token, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -165,4 +168,23 @@ defmodule FuzzyCatalog.Accounts.User do
   """
   def active?(%__MODULE__{status: "active"}), do: true
   def active?(_), do: false
+
+  @doc """
+  A user changeset for OIDC registration.
+  """
+  def oidc_registration_changeset(user, attrs, opts \\ []) do
+    user
+    |> cast(attrs, [:email, :provider, :provider_uid, :provider_token, :role, :status])
+    |> validate_required([:email, :provider, :provider_uid])
+    |> validate_email(opts)
+    |> validate_inclusion(:role, ["user", "admin"])
+    |> validate_inclusion(:status, ["active", "disabled"])
+    |> unique_constraint([:provider, :provider_uid])
+  end
+
+  @doc """
+  Returns true if the user was created via OIDC.
+  """
+  def oidc_user?(%__MODULE__{provider: provider}) when not is_nil(provider), do: true
+  def oidc_user?(_), do: false
 end

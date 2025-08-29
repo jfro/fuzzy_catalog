@@ -52,6 +52,7 @@ defmodule FuzzyCatalogWeb.Router do
 
     get "/users/register", UserRegistrationController, :new
     post "/users/register", UserRegistrationController, :create
+    get "/auth/oidc", OIDCController, :authorize
   end
 
   scope "/", FuzzyCatalogWeb do
@@ -88,5 +89,6 @@ defmodule FuzzyCatalogWeb.Router do
     get "/users/log-in/:token", UserSessionController, :confirm
     post "/users/log-in", UserSessionController, :create
     delete "/users/log-out", UserSessionController, :delete
+    get "/auth/oidc/callback", OIDCController, :callback
   end
 end
