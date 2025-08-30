@@ -202,4 +202,12 @@ if config_env() == :prod do
     from_address: System.get_env("EMAIL_FROM_ADDRESS", "noreply@localhost")
 end
 
+# Configure OIDC
+config :fuzzy_catalog, :oidc,
+  client_id: System.get_env("OIDC_CLIENT_ID"),
+  client_secret: System.get_env("OIDC_CLIENT_SECRET"),
+  base_url: System.get_env("OIDC_BASE_URL"),
+  redirect_uri: System.get_env("OIDC_REDIRECT_URI") || "http://localhost:4000/auth/oidc/callback",
+  authorization_params: [scope: "openid profile email"]
+
 # end if prod

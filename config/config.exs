@@ -92,14 +92,6 @@ config :phoenix, :json_library, Jason
 # Configure Flop
 config :flop, repo: FuzzyCatalog.Repo
 
-# Configure OIDC
-config :fuzzy_catalog, :oidc,
-  client_id: System.get_env("OIDC_CLIENT_ID"),
-  client_secret: System.get_env("OIDC_CLIENT_SECRET"),
-  base_url: System.get_env("OIDC_BASE_URL"),
-  redirect_uri: System.get_env("OIDC_REDIRECT_URI") || "http://localhost:4000/auth/oidc/callback",
-  authorization_params: [scope: "openid profile email"]
-
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
