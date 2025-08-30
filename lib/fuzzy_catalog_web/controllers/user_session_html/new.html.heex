@@ -70,5 +70,16 @@
         Log in only this time
       </.button>
     </.form>
+
+    <%= if oidc_enabled?() do %>
+      <div class="divider">or</div>
+      
+      <.link
+        href={~p"/auth/oidc"}
+        class="btn btn-primary btn-outline w-full"
+      >
+        Sign in with OIDC <span aria-hidden="true">→</span>
+      </.link>
+    <% end %>
   </div>
 </Layouts.app>

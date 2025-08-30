@@ -71,7 +71,8 @@ defmodule FuzzyCatalog.MixProject do
       {:dns_cluster, "~> 0.2.0"},
       {:bandit, "~> 1.5"},
       {:flop, "~> 0.26.0"},
-      {:flop_phoenix, "~> 0.25.3"}
+      {:flop_phoenix, "~> 0.25.3"},
+      {:assent, "~> 0.3.1"}
     ]
   end
 

@@ -27,6 +27,23 @@ defmodule FuzzyCatalog.Accounts do
   end
 
   @doc """
+  Gets a user by provider and provider UID.
+
+  ## Examples
+
+      iex> get_user_by_provider("oidc", "123456")
+      %User{}
+
+      iex> get_user_by_provider("oidc", "unknown")
+      nil
+
+  """
+  def get_user_by_provider(provider, provider_uid)
+      when is_binary(provider) and is_binary(provider_uid) do
+    Repo.get_by(User, provider: provider, provider_uid: provider_uid)
+  end
+
+  @doc """
   Gets a user by email and password.
 
   ## Examples
@@ -111,6 +128,38 @@ defmodule FuzzyCatalog.Accounts do
     %User{}
     |> User.registration_changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  Creates a user from a changeset.
+  """
+  def create_user_from_changeset(changeset) do
+    Repo.insert(changeset)
+  end
+
+  @doc """
+  Returns true if there are no users in the system.
+  """
+  def first_user? do
+    Repo.aggregate(User, :count) == 0
+  end
+
+  @doc """
+  Ensures the first user in the system is marked as admin.
+  This function should be called after user creation.
+  """
+  def ensure_first_user_is_admin do
+    import Ecto.Query
+    # Get the first user (oldest by insertion)
+    first_user = Repo.one(from u in User, order_by: [asc: u.inserted_at], limit: 1)
+
+    if first_user && first_user.role != "admin" do
+      first_user
+      |> User.admin_changeset(%{role: "admin"})
+      |> Repo.update()
+    else
+      {:ok, first_user}
+    end
   end
 
   ## Settings
@@ -381,30 +430,6 @@ defmodule FuzzyCatalog.Accounts do
   """
   def change_user_admin(user, attrs \\ %{}) do
     User.admin_changeset(user, attrs)
-  end
-
-  @doc """
-  Ensures the first user gets admin role.
-  """
-  def ensure_first_user_is_admin do
-    case Repo.aggregate(User, :count, :id) do
-      0 ->
-        :no_users
-
-      1 ->
-        case Repo.one(from u in User, limit: 1) do
-          %User{role: "admin"} = user ->
-            {:ok, user}
-
-          %User{} = user ->
-            user
-            |> User.admin_changeset(%{role: "admin"})
-            |> Repo.update()
-        end
-
-      _ ->
-        :multiple_users
-    end
   end
 
   ## Token helper
