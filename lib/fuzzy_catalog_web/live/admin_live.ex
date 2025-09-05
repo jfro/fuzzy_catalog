@@ -68,12 +68,6 @@ defmodule FuzzyCatalogWeb.AdminLive do
   end
 
   @impl true
-  def handle_event("test_click", _params, socket) do
-    Logger.info("TEST CLICK EVENT TRIGGERED - LiveView is working!")
-    {:noreply, put_flash(socket, :info, "Test click worked!")}
-  end
-
-  @impl true
   def handle_event("refresh_provider", %{"provider" => provider_name}, socket) do
     Logger.info("Refresh provider button clicked for: #{provider_name}")
 
