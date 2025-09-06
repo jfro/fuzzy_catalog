@@ -99,6 +99,22 @@ defmodule FuzzyCatalog.AdminSettings do
   end
 
   @doc """
+  Returns the provider refresh interval setting.
+  Defaults to "disabled" if not set.
+  """
+  def get_provider_refresh_interval do
+    get_setting_value("provider_refresh_interval", "disabled")
+  end
+
+  @doc """
+  Sets the provider refresh interval.
+  Accepts time intervals like "1h", "30m", "15m" or "disabled".
+  """
+  def set_provider_refresh_interval(interval) when is_binary(interval) do
+    put_setting("provider_refresh_interval", interval)
+  end
+
+  @doc """
   Returns all settings as a map.
   """
   def all_settings do

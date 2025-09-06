@@ -80,6 +80,7 @@ defmodule FuzzyCatalogWeb.Router do
 
     live "/", AdminLive, :index
     live "/users", AdminUsersLive, :index
+    live "/settings", AdminSettingsLive, :index
   end
 
   scope "/", FuzzyCatalogWeb do
