@@ -87,12 +87,14 @@ defmodule FuzzyCatalogWeb.AdminSettingsLive do
   @impl true
   def handle_event("validate_settings", %{"settings_form" => params}, socket) do
     Logger.debug("AdminSettingsLive: validate_settings params: #{inspect(params)}")
-    
+
     changeset = build_changeset_from_params(params)
     selected_preset = Map.get(params, "provider_refresh_interval", "disabled")
     custom_interval = Map.get(params, "custom_interval", "")
-    
-    Logger.debug("AdminSettingsLive: selected_preset=#{selected_preset}, custom_interval=#{custom_interval}")
+
+    Logger.debug(
+      "AdminSettingsLive: selected_preset=#{selected_preset}, custom_interval=#{custom_interval}"
+    )
 
     socket =
       socket

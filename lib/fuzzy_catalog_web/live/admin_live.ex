@@ -83,15 +83,23 @@ defmodule FuzzyCatalogWeb.AdminLive do
           Logger.warning("Provider #{provider_name} is already syncing")
           {:noreply, put_flash(socket, :error, "#{provider_name} is already syncing")}
         else
-          Logger.info("Starting sync task for #{provider_name}")
-          spawn(fn -> sync_provider_with_status(provider_module) end)
+          # Immediately set sync status to provide instant UI feedback
+          case SyncStatusManager.start_sync(provider_name) do
+            :ok ->
+              Logger.info("Started sync status for #{provider_name}")
+              spawn(fn -> sync_provider_with_status(provider_module) end)
 
-          socket =
-            socket
-            |> put_flash(:info, "Started syncing #{provider_name}")
-            |> assign(:providers, get_providers_with_status())
+              socket =
+                socket
+                |> put_flash(:info, "Started syncing #{provider_name}")
+                |> assign(:providers, get_providers_with_status())
 
-          {:noreply, socket}
+              {:noreply, socket}
+
+            {:error, :already_syncing} ->
+              Logger.warning("Provider #{provider_name} is already syncing")
+              {:noreply, put_flash(socket, :error, "#{provider_name} is already syncing")}
+          end
         end
     end
   end
@@ -111,16 +119,26 @@ defmodule FuzzyCatalogWeb.AdminLive do
         Logger.warning("No external library providers are available")
         {:noreply, put_flash(socket, :error, "No external library providers are available")}
       else
-        Logger.info("Starting sync task for all providers")
-        Task.start(fn -> sync_all_providers_with_status(available_providers) end)
+        # Immediately start sync status for all providers to provide instant UI feedback
+        provider_names = Enum.map(available_providers, & &1.provider_name())
+        sync_start_results = Enum.map(provider_names, &SyncStatusManager.start_sync/1)
 
-        socket =
-          socket
-          |> assign(:syncing_all, true)
-          |> put_flash(:info, "Started syncing all available providers")
-          |> assign(:providers, get_providers_with_status())
+        # Check if all providers started successfully
+        if Enum.all?(sync_start_results, &(&1 == :ok)) do
+          Logger.info("Started sync status for all providers")
+          Task.start(fn -> sync_all_providers_with_status(available_providers) end)
 
-        {:noreply, socket}
+          socket =
+            socket
+            |> assign(:syncing_all, true)
+            |> put_flash(:info, "Started syncing all available providers")
+            |> assign(:providers, get_providers_with_status())
+
+          {:noreply, socket}
+        else
+          Logger.error("Failed to start sync for some providers: #{inspect(sync_start_results)}")
+          {:noreply, put_flash(socket, :error, "Failed to start sync for some providers")}
+        end
       end
     end
   end
@@ -185,13 +203,7 @@ defmodule FuzzyCatalogWeb.AdminLive do
 
   defp sync_all_providers_with_status(provider_modules) do
     try do
-      # Start sync for all providers
-      Enum.each(provider_modules, fn provider_module ->
-        provider_name = provider_module.provider_name()
-        SyncStatusManager.start_sync(provider_name)
-      end)
-
-      # Sync each provider
+      # Sync each provider (start_sync was already called in handle_event)
       Enum.each(provider_modules, fn provider_module ->
         sync_provider_with_status(provider_module)
       end)
