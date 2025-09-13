@@ -82,9 +82,10 @@ window.liveSocket = liveSocket
 //   })
 // }
 
-// Handle flash close
-document.querySelectorAll("[role=alert][data-flash]").forEach((el) => {
-  el.addEventListener("click", () => {
-    el.setAttribute("hidden", "");
-  });
+// Handle flash close with event delegation for both static and dynamic flash messages
+document.addEventListener("click", (e) => {
+  const flashElement = e.target.closest("[role=alert][data-flash]");
+  if (flashElement && e.target.closest("button")) {
+    flashElement.setAttribute("hidden", "");
+  }
 });
