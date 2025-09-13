@@ -9,7 +9,8 @@
       "Bash(mix precommit:*)",
       "WebFetch(domain:github.com)",
       "WebFetch(domain:openlibrary.org)",
-      "Bash(mix test)"
+      "Bash(mix test)",
+      "Bash(mix test:*)"
     ],
     "deny": []
   }
