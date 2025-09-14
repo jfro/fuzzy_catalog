@@ -25,7 +25,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         "Starting sync with #{length(providers)} provider(s): #{Enum.join(Enum.map(providers, & &1.provider_name()), ", ")}"
       )
 
-      results = Enum.map(providers, &sync_provider/1)
+      results = Enum.map(providers, &sync_provider_with_start/1)
 
       summary = %{
         providers: Enum.map(providers, & &1.provider_name()),
@@ -40,7 +40,36 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
   end
 
   @doc """
+  Synchronize books from a specific provider, calling start_sync first.
+  This is used by sync_all_providers for scheduled syncs.
+  """
+  def sync_provider_with_start(provider_module) do
+    provider_name = provider_module.provider_name()
+
+    case SyncStatusManager.start_sync(provider_name) do
+      :ok ->
+        Logger.info("ExternalLibrarySync: Started sync status for #{provider_name}")
+        sync_provider(provider_module)
+
+      {:error, :already_syncing} ->
+        Logger.warning(
+          "ExternalLibrarySync: Provider #{provider_name} is already syncing, skipping"
+        )
+
+        error_stats = %{
+          provider: provider_name,
+          total_books: 0,
+          new_books: 0,
+          errors: ["Provider is already syncing"]
+        }
+
+        {provider_module, error_stats}
+    end
+  end
+
+  @doc """
   Synchronize books from a specific provider using streaming for efficient memory usage.
+  Assumes start_sync has already been called (used by AdminLive).
   """
   def sync_provider(provider_module) do
     provider_name = provider_module.provider_name()
