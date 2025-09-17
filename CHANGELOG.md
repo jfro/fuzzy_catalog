@@ -1,5 +1,9 @@
 # Fuzzy Catalog Changelog
 
+## v0.3.1
+
+- Fix scheduled external library sync not syncing anymore
+
 ## v0.3.0
 
 - Fixes sync popups not being closeable - #4
