@@ -47,6 +47,33 @@
             </div>
           </div>
       <% end %>
+
+      <!-- External Library Links Section -->
+      <% external_links = Enum.filter(@external_data, fn {_media_type, data} ->
+           data.external_id && audiobookshelf_url(data.external_id)
+         end) %>
+      <%= if not Enum.empty?(external_links) do %>
+        <div class="mt-4 max-w-sm mx-auto">
+          <h4 class="text-sm font-medium text-base-content mb-3">External Sources</h4>
+          <div class="space-y-2">
+            <%= for {media_type, data} <- external_links do %>
+              <% external_url = audiobookshelf_url(data.external_id) %>
+              <a
+                href={external_url}
+                target="_blank"
+                class="flex items-center px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 hover:text-gray-900 transition-colors w-full"
+              >
+                <.icon name="hero-book-open" class="h-4 w-4 mr-2 text-gray-500" />
+                <div class="flex-1 text-left">
+                  <div class="capitalize text-xs text-gray-500">{if media_type == "unspecified", do: "Unspecified", else: media_type}</div>
+                  <div class="text-blue-600 font-medium">Audiobookshelf</div>
+                </div>
+                <.icon name="hero-arrow-top-right-on-square" class="h-4 w-4 text-blue-500" />
+              </a>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
     </div>
     
 <!-- Book Details -->

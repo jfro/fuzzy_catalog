@@ -275,6 +275,28 @@ defmodule FuzzyCatalog.Collections do
   end
 
   @doc """
+  Gets all collection items for a book with their external library data.
+
+  Returns a map where keys are media types and values are maps containing
+  the external_id and any other external library information.
+
+  ## Examples
+
+      iex> get_book_external_data(book)
+      %{"audiobook" => %{external_id: "abc123", media_type: "audiobook"},
+        "paperbook" => %{external_id: nil, media_type: "paperback"}}
+
+  """
+  def get_book_external_data(%Book{id: book_id}) do
+    CollectionItem
+    |> where([ci], ci.book_id == ^book_id)
+    |> select([ci], %{media_type: ci.media_type, external_id: ci.external_id})
+    |> order_by([ci], ci.media_type)
+    |> Repo.all()
+    |> Enum.into(%{}, fn item -> {item.media_type, item} end)
+  end
+
+  @doc """
   Gets all books that are in the library with their media types.
 
   ## Examples

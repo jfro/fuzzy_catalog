@@ -27,6 +27,7 @@ defmodule FuzzyCatalogWeb.BookController do
   def show(conn, %{"id" => id}) do
     book = Catalog.get_book!(id)
     media_types = Collections.get_book_media_types(book)
+    external_data = Collections.get_book_external_data(book)
 
     current_user =
       case conn.assigns[:current_scope] do
@@ -37,6 +38,7 @@ defmodule FuzzyCatalogWeb.BookController do
     render(conn, :show,
       book: book,
       media_types: media_types,
+      external_data: external_data,
       current_user: current_user
     )
   end

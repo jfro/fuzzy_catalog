@@ -227,4 +227,35 @@ defmodule FuzzyCatalogWeb.BookHTML do
   def format_publication_date(""), do: ""
   def format_publication_date(iso_string) when is_binary(iso_string), do: iso_string
   def format_publication_date(_), do: ""
+
+  @doc """
+  Builds an Audiobookshelf URL for a given external_id.
+
+  Returns nil if Audiobookshelf is not configured or external_id is nil.
+
+  ## Examples
+
+      iex> audiobookshelf_url("abc123")
+      "https://myserver.com/item/abc123"
+
+      iex> audiobookshelf_url(nil)
+      nil
+  """
+  def audiobookshelf_url(nil), do: nil
+  def audiobookshelf_url(""), do: nil
+
+  def audiobookshelf_url(external_id) when is_binary(external_id) do
+    config = Application.get_env(:fuzzy_catalog, :audiobookshelf, [])
+
+    case Keyword.get(config, :url) do
+      url when is_binary(url) and url != "" ->
+        base_url = String.trim_trailing(url, "/")
+        "#{base_url}/item/#{external_id}"
+
+      _ ->
+        nil
+    end
+  end
+
+  def audiobookshelf_url(_), do: nil
 end
