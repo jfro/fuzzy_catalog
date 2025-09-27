@@ -13,7 +13,7 @@ This is still pretty heavily under development, but closing in on something I th
 ## Features
 
 - Barcode scanning of physical books via keyboard input scanners (webcam one may still work but have not had much luck with it)
-- Ability to sync with digital libraries, currently from Audiobookshelf (via API) & Calibre (via actual path to library files)
+- Ability to sync with digital libraries, currently from [Audiobookshelf](https://www.audiobookshelf.org/) (via API), [Calibre](https://calibre-ebook.com/) (via actual path to library files), & [BookLore](https://github.com/booklore-app/booklore) via API
 - Adding books via title or ISBN pulls metadata from Open Library or Google Books (Library of Congress available but not sure it's worth using)
 
 ## Environment Setup
@@ -24,10 +24,13 @@ This is still pretty heavily under development, but closing in on something I th
 | SECRET_KEY_BASE | REQUIRED random secret |
 | PHX_HOST | domain to use (i.e. localhost) |
 | PORT | port to use, default is 4000 |
-| AUDIOBOOKSHELF_URL | URL to an instance of Audiobookshelf for syncing |
+| AUDIOBOOKSHELF_URL | URL to an instance of [Audiobookshelf](https://www.audiobookshelf.org/) for syncing |
 | AUDIOBOOKSHELF_API_KEY | API key for Audiobookshelf |
 | AUDIOBOOKSHELF_LIBRARIES | Comma separated list of library names to sync from Audiobookshelf |
 | CALIBRE_LIBRARY_PATH | Path to Calibre library files, including ebooks & metadata.db file |
+| BOOKLORE_URL | URL for a [BookLore](https://github.com/booklore-app/booklore) instance to sync with |
+| BOOKLORE_USERNAME | Username for a BookLore |
+| BOOKLORE_PASSWORD | Password for BookLore |
 
 ## Possible TODO
 
