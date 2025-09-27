@@ -50,39 +50,49 @@
       
 <!-- External Library Links Section -->
       <% external_links =
-        Enum.flat_map(@external_data, fn {media_type, data} ->
-          if data.external_id do
-            external_sources =
-              [
-                {audiobookshelf_url(data.external_id), "Audiobookshelf"},
-                {booklore_url(data.external_id), "BookLore"}
-              ]
-              |> Enum.filter(fn {url, _name} -> url end)
-              |> Enum.map(fn {url, name} -> {media_type, data, url, name} end)
+        Enum.flat_map(@external_data, fn {media_type, links} ->
+          Enum.flat_map(links, fn link ->
+            external_url =
+              case link.provider do
+                "audiobookshelf" -> audiobookshelf_url(link.external_id)
+                "booklore" -> booklore_url(link.external_id)
+                "calibre" -> calibre_url(link.external_id)
+                _ -> nil
+              end
 
-            external_sources
-          else
-            []
-          end
+            if external_url do
+              provider_display_name =
+                case link.provider do
+                  "audiobookshelf" -> "Audiobookshelf"
+                  "booklore" -> "BookLore"
+                  "calibre" -> "Calibre"
+                  _ -> String.capitalize(link.provider)
+                end
+
+              [{media_type, link, external_url, provider_display_name}]
+            else
+              []
+            end
+          end)
         end) %>
       <%= if not Enum.empty?(external_links) do %>
         <div class="mt-4 max-w-sm mx-auto">
           <h4 class="text-sm font-medium text-base-content mb-3">External Sources</h4>
           <div class="space-y-2">
-            <%= for {media_type, _data, external_url, provider_name} <- external_links do %>
+            <%= for {media_type, _link, external_url, provider_name} <- external_links do %>
               <a
                 href={external_url}
                 target="_blank"
-                class="flex items-center px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-md text-sm text-gray-700 hover:text-gray-900 transition-colors w-full"
+                class="flex items-center px-3 py-2 bg-base-200 hover:bg-base-300 border border-base-300 rounded-md text-sm text-base-content hover:text-base-content transition-colors w-full"
               >
-                <.icon name="hero-book-open" class="h-4 w-4 mr-2 text-gray-500" />
+                <.icon name="hero-book-open" class="h-4 w-4 mr-2 text-base-content/60" />
                 <div class="flex-1 text-left">
-                  <div class="capitalize text-xs text-gray-500">
+                  <div class="capitalize text-xs text-base-content/60">
                     {if media_type == "unspecified", do: "Unspecified", else: media_type}
                   </div>
-                  <div class="text-blue-600 font-medium">{provider_name}</div>
+                  <div class="text-primary font-medium">{provider_name}</div>
                 </div>
-                <.icon name="hero-arrow-top-right-on-square" class="h-4 w-4 text-blue-500" />
+                <.icon name="hero-arrow-top-right-on-square" class="h-4 w-4 text-primary" />
               </a>
             <% end %>
           </div>

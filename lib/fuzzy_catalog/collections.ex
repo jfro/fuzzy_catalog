@@ -8,6 +8,7 @@ defmodule FuzzyCatalog.Collections do
 
   alias FuzzyCatalog.Collections.CollectionItem
   alias FuzzyCatalog.Catalog.Book
+  alias FuzzyCatalog.Catalog.ExternalLibraryLink
 
   @doc """
   Returns the list of all collection items, grouped by book.
@@ -98,6 +99,8 @@ defmodule FuzzyCatalog.Collections do
 
   @doc """
   Gets a collection item by external_id.
+
+  @deprecated "Use FuzzyCatalog.Catalog.get_external_link_by_id/2 instead"
 
   ## Examples
 
@@ -278,23 +281,41 @@ defmodule FuzzyCatalog.Collections do
   @doc """
   Gets all collection items for a book with their external library data.
 
-  Returns a map where keys are media types and values are maps containing
-  the external_id and any other external library information.
+  Returns a map where keys are media types and values contain the external links
+  for that media type.
 
   ## Examples
 
       iex> get_book_external_data(book)
-      %{"audiobook" => %{external_id: "abc123", media_type: "audiobook"},
-        "paperbook" => %{external_id: nil, media_type: "paperback"}}
+      %{"audiobook" => [%{external_id: "abc123", provider: "audiobookshelf"}],
+        "paperback" => []}
 
   """
   def get_book_external_data(%Book{id: book_id}) do
-    CollectionItem
-    |> where([ci], ci.book_id == ^book_id)
-    |> select([ci], %{media_type: ci.media_type, external_id: ci.external_id})
-    |> order_by([ci], ci.media_type)
-    |> Repo.all()
-    |> Enum.into(%{}, fn item -> {item.media_type, item} end)
+    # Get all collection items (media types) for the book
+    collection_items =
+      CollectionItem
+      |> where([ci], ci.book_id == ^book_id)
+      |> select([ci], ci.media_type)
+      |> Repo.all()
+
+    # Get all external links for the book
+    external_links =
+      ExternalLibraryLink
+      |> where([ell], ell.book_id == ^book_id)
+      |> select([ell], %{
+        media_type: ell.media_type,
+        external_id: ell.external_id,
+        provider: ell.provider
+      })
+      |> Repo.all()
+      |> Enum.group_by(& &1.media_type)
+
+    # Create a map with media types as keys and external link data as values
+    collection_items
+    |> Enum.into(%{}, fn media_type ->
+      {media_type, Map.get(external_links, media_type, [])}
+    end)
   end
 
   @doc """

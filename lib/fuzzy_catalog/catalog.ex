@@ -4,6 +4,7 @@ defmodule FuzzyCatalog.Catalog do
   alias FuzzyCatalog.TitleUtils
 
   alias FuzzyCatalog.Catalog.Book
+  alias FuzzyCatalog.Catalog.ExternalLibraryLink
 
   @doc """
   Returns the list of books.
@@ -337,5 +338,108 @@ defmodule FuzzyCatalog.Catalog do
     |> where([b], b.author == ^author_name)
     |> order_by([b], asc: b.title)
     |> Repo.all()
+  end
+
+  ## External Library Links
+
+  @doc """
+  Gets all external library links for a book.
+
+  ## Examples
+
+      iex> get_book_external_links(book)
+      [%ExternalLibraryLink{}, ...]
+
+  """
+  def get_book_external_links(%Book{id: book_id}) do
+    from(l in ExternalLibraryLink)
+    |> where([l], l.book_id == ^book_id)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets external library links for a book filtered by media type.
+
+  ## Examples
+
+      iex> get_book_external_links(book, "audiobook")
+      [%ExternalLibraryLink{provider: "audiobookshelf"}, ...]
+
+  """
+  def get_book_external_links(%Book{id: book_id}, media_type) do
+    from(l in ExternalLibraryLink)
+    |> where([l], l.book_id == ^book_id and l.media_type == ^media_type)
+    |> Repo.all()
+  end
+
+  @doc """
+  Gets an external library link by external_id and provider.
+
+  ## Examples
+
+      iex> get_external_link_by_id("123", "audiobookshelf")
+      %ExternalLibraryLink{}
+
+      iex> get_external_link_by_id("nonexistent", "provider")
+      nil
+
+  """
+  def get_external_link_by_id(external_id, provider) do
+    from(l in ExternalLibraryLink)
+    |> where([l], l.external_id == ^external_id and l.provider == ^provider)
+    |> preload(:book)
+    |> Repo.one()
+  end
+
+  @doc """
+  Creates an external library link.
+
+  ## Examples
+
+      iex> create_external_link(%{book_id: 1, provider: "audiobookshelf", external_id: "123", media_type: "audiobook"})
+      {:ok, %ExternalLibraryLink{}}
+
+      iex> create_external_link(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_external_link(attrs \\ %{}) do
+    %ExternalLibraryLink{}
+    |> ExternalLibraryLink.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  @doc """
+  Updates an external library link.
+
+  ## Examples
+
+      iex> update_external_link(link, %{external_id: "new_id"})
+      {:ok, %ExternalLibraryLink{}}
+
+      iex> update_external_link(link, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_external_link(%ExternalLibraryLink{} = link, attrs) do
+    link
+    |> ExternalLibraryLink.changeset(attrs)
+    |> Repo.update()
+  end
+
+  @doc """
+  Deletes an external library link.
+
+  ## Examples
+
+      iex> delete_external_link(link)
+      {:ok, %ExternalLibraryLink{}}
+
+      iex> delete_external_link(link)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_external_link(%ExternalLibraryLink{} = link) do
+    Repo.delete(link)
   end
 end

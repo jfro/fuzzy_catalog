@@ -179,8 +179,8 @@ defmodule FuzzyCatalog.SyncStatusManager do
         # Add to history
         history_entry = %{
           provider: provider_name,
-          started_at: provider_status.started_at,
-          completed_at: completed_status.completed_at,
+          started_at: Map.get(provider_status, :started_at),
+          completed_at: Map.get(completed_status, :completed_at),
           results: results,
           success: true
         }
@@ -213,8 +213,8 @@ defmodule FuzzyCatalog.SyncStatusManager do
         # Add to history
         history_entry = %{
           provider: provider_name,
-          started_at: provider_status.started_at,
-          completed_at: failed_status.completed_at,
+          started_at: Map.get(provider_status, :started_at),
+          completed_at: Map.get(failed_status, :completed_at),
           error_message: error,
           success: false
         }

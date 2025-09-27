@@ -194,7 +194,8 @@ defmodule FuzzyCatalog.Storage do
   defp download_image(url) do
     headers = [{"User-Agent", "FuzzyCatalog/1.0"}]
 
-    case Req.get(url, headers: headers) do
+    # Disable automatic JSON decoding since we're downloading binary image data
+    case Req.get(url, headers: headers, decode_body: false) do
       {:ok, %{status: 200, body: body, headers: headers}} ->
         content_type =
           case Enum.find(headers, fn {key, _value} ->
@@ -216,7 +217,16 @@ defmodule FuzzyCatalog.Storage do
               "image/jpeg"
           end
 
-        {:ok, body, content_type}
+        # Detect actual image format from binary data if MIME type is wrong
+        actual_content_type = detect_image_format_from_data(body, content_type)
+
+        if actual_content_type != content_type do
+          Logger.debug(
+            "Corrected content type from '#{content_type}' to '#{actual_content_type}' based on binary data"
+          )
+        end
+
+        {:ok, body, actual_content_type}
 
       {:ok, %{status: status}} ->
         {:error, "HTTP #{status}"}
@@ -234,6 +244,35 @@ defmodule FuzzyCatalog.Storage do
       ".gif" -> "image/gif"
       ".webp" -> "image/webp"
       _ -> "image/jpeg"
+    end
+  end
+
+  defp detect_image_format_from_data(body, fallback_content_type) do
+    # Check binary signature (magic numbers) to detect actual image format
+    case body do
+      # JPEG: FF D8 FF
+      <<0xFF, 0xD8, 0xFF, _rest::binary>> ->
+        "image/jpeg"
+
+      # PNG: 89 50 4E 47 0D 0A 1A 0A
+      <<0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, _rest::binary>> ->
+        "image/png"
+
+      # GIF87a: 47 49 46 38 37 61
+      <<"GIF87a", _rest::binary>> ->
+        "image/gif"
+
+      # GIF89a: 47 49 46 38 39 61
+      <<"GIF89a", _rest::binary>> ->
+        "image/gif"
+
+      # WebP: 52 49 46 46 (RIFF) followed by WEBP at offset 8
+      <<"RIFF", _size::32, "WEBP", _rest::binary>> ->
+        "image/webp"
+
+      # If we can't detect from binary data, use the fallback
+      _ ->
+        fallback_content_type
     end
   end
 end

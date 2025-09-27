@@ -139,7 +139,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
                     )
                   end
 
-                  case sync_book(book_data) do
+                  case sync_book(book_data, provider_module) do
                     {:ok, :new} ->
                       %{
                         acc_stats
@@ -239,7 +239,7 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
     end
   end
 
-  defp sync_book(book_data) do
+  defp sync_book(book_data, provider_module) do
     # Try to find existing book by ISBN or title/author
     existing_book = find_existing_book(book_data)
 
@@ -249,10 +249,11 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
         case create_book_from_sync_data(book_data) do
           {:ok, book} ->
             # Add to collection with the media type from sync data
-            collection_attrs = build_collection_attrs(book_data)
-
-            case Collections.add_to_collection(book, book_data.media_type, collection_attrs) do
+            case Collections.add_to_collection(book, book_data.media_type) do
               {:ok, _collection_item} ->
+                # Create external library link
+                create_external_link_for_sync(book, book_data, provider_module)
+
                 Logger.debug(
                   "Added new book '#{book.title}' to collection as #{book_data.media_type}"
                 )
@@ -274,28 +275,31 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
       book ->
         # Book exists, maybe update cover if we don't have one
         updated_book = maybe_update_cover(book, book_data)
+        cover_was_updated = updated_book.cover_image_key != book.cover_image_key
 
-        # Check if collection item exists by external_id or book/media_type combination
-        if collection_item_exists?(updated_book, book_data) do
+        if cover_was_updated do
+          Logger.info("Updated cover for existing book '#{updated_book.title}'")
+        end
+
+        # Check if external library link already exists for this provider
+        if external_link_exists?(updated_book, book_data, provider_module) do
+          Logger.debug(
+            "Book '#{updated_book.title}' already linked to #{provider_module.provider_name()} for #{book_data.media_type}#{if cover_was_updated, do: " (cover updated)", else: ""}"
+          )
+
           {:ok, :existing}
         else
-          collection_attrs = build_collection_attrs(book_data)
+          # Ensure book is in collection for this media type
+          ensure_book_in_collection(updated_book, book_data.media_type)
 
-          case Collections.add_to_collection(updated_book, book_data.media_type, collection_attrs) do
-            {:ok, _collection_item} ->
-              Logger.debug(
-                "Added existing book '#{updated_book.title}' to collection as #{book_data.media_type}"
-              )
+          # Create external library link
+          create_external_link_for_sync(updated_book, book_data, provider_module)
 
-              {:ok, :existing}
+          Logger.debug(
+            "Added existing book '#{updated_book.title}' link to #{provider_module.provider_name()} for #{book_data.media_type}"
+          )
 
-            {:error, changeset} ->
-              Logger.warning(
-                "Failed to add existing book '#{updated_book.title}' to collection: #{inspect(changeset.errors)}"
-              )
-
-              {:ok, :existing}
-          end
+          {:ok, :existing}
         end
     end
   end
@@ -379,8 +383,14 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
 
   defp maybe_update_cover(book, book_data) do
     # Only update cover if book doesn't have one and sync data provides one
-    if (is_nil(book.cover_image_key) or book.cover_image_key == "") and
-         not is_nil(book_data.cover_url) and book_data.cover_url != "" do
+    has_cover = not (is_nil(book.cover_image_key) or book.cover_image_key == "")
+    has_cover_url = not is_nil(book_data.cover_url) and book_data.cover_url != ""
+
+    Logger.debug(
+      "Checking cover update for '#{book.title}': has_cover=#{has_cover}, has_cover_url=#{has_cover_url}, cover_key=#{inspect(book.cover_image_key)}"
+    )
+
+    if not has_cover and has_cover_url do
       case Storage.download_and_store_cover(book_data.cover_url) do
         {:ok, storage_key} ->
           case Catalog.update_book(book, %{cover_image_key: storage_key}) do
@@ -400,57 +410,109 @@ defmodule FuzzyCatalog.Catalog.ExternalLibrarySync do
           book
       end
     else
+      if has_cover do
+        Logger.debug("Book '#{book.title}' already has cover, skipping download")
+      else
+        Logger.debug("Book '#{book.title}' has no cover URL to download")
+      end
+
       book
     end
   end
 
   defp download_cover_for_sync(attrs, book_data) do
     if not is_nil(book_data.cover_url) and book_data.cover_url != "" do
+      Logger.debug(
+        "Attempting to download cover for '#{book_data.title}' from: #{book_data.cover_url}"
+      )
+
       case Storage.download_and_store_cover(book_data.cover_url) do
         {:ok, storage_key} ->
           Logger.debug("Downloaded cover for '#{book_data.title}' from external library")
           Map.put(attrs, :cover_image_key, storage_key)
 
         {:error, reason} ->
-          Logger.debug("Failed to download cover for '#{book_data.title}': #{reason}")
+          Logger.warning("Failed to download cover for '#{book_data.title}': #{reason}")
           attrs
       end
     else
+      if Map.has_key?(book_data, :cover_url) do
+        Logger.debug(
+          "No cover URL or empty cover URL for '#{book_data.title}' - cover_url: #{inspect(book_data.cover_url)}"
+        )
+      else
+        Logger.debug("No cover_url field for '#{book_data.title}'")
+      end
+
       attrs
     end
   end
 
-  defp collection_item_exists?(book, book_data) do
-    # First check by external_id if available
+  defp external_link_exists?(_book, book_data, provider_module) do
+    # Check if external library link already exists for this provider and media type
     if Map.has_key?(book_data, :external_id) and not is_nil(book_data.external_id) do
-      case Collections.get_collection_item_by_external_id(book_data.external_id) do
-        nil ->
-          # Fallback to book/media_type check
-          Collections.book_media_type_in_collection?(book, book_data.media_type)
+      provider_name = normalize_provider_name(provider_module.provider_name())
 
-        _item ->
-          true
+      case Catalog.get_external_link_by_id(book_data.external_id, provider_name) do
+        nil -> false
+        _link -> true
       end
     else
-      # No external_id, use existing logic
-      Collections.book_media_type_in_collection?(book, book_data.media_type)
+      false
+    end
+  end
+
+  defp ensure_book_in_collection(book, media_type) do
+    # Add book to collection if not already present for this media type
+    unless Collections.book_media_type_in_collection?(book, media_type) do
+      case Collections.add_to_collection(book, media_type) do
+        {:ok, _} -> :ok
+        # Ignore errors, might already exist
+        {:error, _} -> :ok
+      end
+    end
+  end
+
+  defp create_external_link_for_sync(book, book_data, provider_module) do
+    # Create external library link if external_id is available
+    if Map.has_key?(book_data, :external_id) and not is_nil(book_data.external_id) do
+      provider_name = normalize_provider_name(provider_module.provider_name())
+
+      attrs = %{
+        book_id: book.id,
+        media_type: book_data.media_type,
+        provider: provider_name,
+        external_id: book_data.external_id
+      }
+
+      case Catalog.create_external_link(attrs) do
+        {:ok, _link} ->
+          Logger.debug("Created external link for #{book.title} to #{provider_name}")
+          :ok
+
+        {:error, changeset} ->
+          Logger.warning(
+            "Failed to create external link for #{book.title}: #{inspect(changeset.errors)}"
+          )
+
+          :ok
+      end
+    end
+  end
+
+  defp normalize_provider_name(provider_name) do
+    # Convert provider display name to normalized database value
+    case String.downcase(provider_name) do
+      "audiobookshelf" -> "audiobookshelf"
+      "calibre" -> "calibre"
+      "booklore" -> "booklore"
+      name -> String.downcase(name)
     end
   end
 
   defp normalize_isbn_data(book_data) do
     # Use the centralized ISBN utils to parse identifiers
     IsbnUtils.parse_identifiers(book_data)
-  end
-
-  defp build_collection_attrs(book_data) do
-    attrs = %{}
-
-    # Add external_id if available
-    if Map.has_key?(book_data, :external_id) and not is_nil(book_data.external_id) do
-      Map.put(attrs, :external_id, book_data.external_id)
-    else
-      attrs
-    end
   end
 
   defp format_changeset_errors(changeset) do
