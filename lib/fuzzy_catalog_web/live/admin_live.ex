@@ -16,6 +16,11 @@ defmodule FuzzyCatalogWeb.AdminLive do
       module: FuzzyCatalog.Catalog.Providers.CalibreProvider,
       name: "Calibre",
       description: "Sync books from Calibre library"
+    },
+    %{
+      module: FuzzyCatalog.Catalog.Providers.BookLoreProvider,
+      name: "BookLore",
+      description: "Sync books from BookLore library"
     }
   ]
 

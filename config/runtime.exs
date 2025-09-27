@@ -210,4 +210,7 @@ config :fuzzy_catalog, :oidc,
   redirect_uri: System.get_env("OIDC_REDIRECT_URI") || "http://localhost:4000/auth/oidc/callback",
   authorization_params: [scope: "openid profile email"]
 
-# end if prod
+config :fuzzy_catalog, :booklore,
+  url: System.get_env("BOOKLORE_URL"),
+  username: System.get_env("BOOKLORE_USERNAME"),
+  password: System.get_env("BOOKLORE_PASSWORD")

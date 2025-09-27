@@ -134,7 +134,7 @@
               <div class="stat">
                 <div class="stat-title">Last Sync</div>
                 <div class="stat-value text-sm">
-                  {format_datetime(provider.sync_status.completed_at)}
+                  {format_datetime(Map.get(provider.sync_status, :completed_at))}
                 </div>
               </div>
               <div class="stat">
@@ -161,7 +161,7 @@
                   <div class="stat-value text-sm">
                     {format_duration(
                       provider.sync_status.started_at,
-                      provider.sync_status.completed_at
+                      Map.get(provider.sync_status, :completed_at)
                     )}
                   </div>
                 </div>

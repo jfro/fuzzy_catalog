@@ -258,4 +258,35 @@ defmodule FuzzyCatalogWeb.BookHTML do
   end
 
   def audiobookshelf_url(_), do: nil
+
+  @doc """
+  Builds a BookLore URL for a given external_id.
+
+  Returns nil if BookLore is not configured or external_id is nil.
+
+  ## Examples
+
+      iex> booklore_url("123")
+      "https://myserver.com/book/123"
+
+      iex> booklore_url(nil)
+      nil
+  """
+  def booklore_url(nil), do: nil
+  def booklore_url(""), do: nil
+
+  def booklore_url(external_id) when is_binary(external_id) do
+    config = Application.get_env(:fuzzy_catalog, :booklore, [])
+
+    case Keyword.get(config, :url) do
+      url when is_binary(url) and url != "" ->
+        base_url = String.trim_trailing(url, "/")
+        "#{base_url}/book/#{external_id}"
+
+      _ ->
+        nil
+    end
+  end
+
+  def booklore_url(_), do: nil
 end

@@ -112,6 +112,7 @@ defmodule FuzzyCatalog.Collections do
     CollectionItem
     |> where([ci], ci.external_id == ^external_id)
     |> preload(:book)
+    |> limit(1)
     |> Repo.one()
   end
 
