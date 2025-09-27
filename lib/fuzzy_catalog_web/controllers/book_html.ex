@@ -72,6 +72,21 @@ defmodule FuzzyCatalogWeb.BookHTML do
   end
 
   @doc """
+  Builds a URL with the specified view mode without any search/filter parameters.
+  Used for the clear button functionality.
+  """
+  def build_clear_url(conn, _meta, view_mode) do
+    # Only preserve view mode, clear all search/filter parameters
+    query_params = %{"view" => view_mode}
+    encoded_params = URI.encode_query(query_params)
+
+    case encoded_params do
+      "" -> conn.request_path
+      params -> "#{conn.request_path}?#{params}"
+    end
+  end
+
+  @doc """
   Returns the icon name for the current view toggle button.
   """
   def view_toggle_icon("grid"), do: "hero-list-bullet"

@@ -38,7 +38,7 @@
           </button>
           <%= if has_search_filter?(@meta) do %>
             <.link
-              href={build_view_url(@conn, @meta, current_view_mode(assigns))}
+              href={build_clear_url(@conn, @meta, current_view_mode(assigns))}
               class="btn btn-outline"
             >
               <.icon name="hero-x-mark" class="h-4 w-4 mr-2" /> Clear
