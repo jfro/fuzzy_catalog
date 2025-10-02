@@ -1,0 +1,126 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.admin_layout current_page="import-export" title="Import & Export" subtitle="Manage your catalog data imports and exports">
+
+  <div class="mb-8 flex flex-col sm:flex-row gap-4">
+    <.link href={~p"/admin/import-export/export/new"} class="btn btn-primary">
+      <.icon name="hero-arrow-down-tray" class="h-4 w-4 mr-2" />
+      Export Data
+    </.link>
+    <.link href={~p"/admin/import-export/import/new"} class="btn btn-success">
+      <.icon name="hero-arrow-up-tray" class="h-4 w-4 mr-2" />
+      Import Data
+    </.link>
+  </div>
+
+<div class="mt-8">
+  <%= if @jobs == [] do %>
+    <div class="hero bg-base-200 rounded-lg">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <.icon name="hero-document-arrow-up" class="mx-auto h-16 w-16 text-base-content/30 mb-4" />
+          <h3 class="text-lg font-bold text-base-content">No import/export jobs yet</h3>
+          <p class="py-4 text-base-content/70">
+            Get started by creating an export of your catalog data or importing books from a file.
+          </p>
+          <div class="flex flex-col sm:flex-row gap-3 justify-center">
+            <.link href={~p"/admin/import-export/export/new"} class="btn btn-primary">
+              <.icon name="hero-arrow-down-tray" class="h-4 w-4 mr-2" />
+              Export Data
+            </.link>
+            <.link href={~p"/admin/import-export/import/new"} class="btn btn-success">
+              <.icon name="hero-arrow-up-tray" class="h-4 w-4 mr-2" />
+              Import Data
+            </.link>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="grid gap-4">
+      <%= for job <- @jobs do %>
+        <div class="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
+          <div class="card-body">
+            <.link href={~p"/admin/import-export/#{job.id}"} class="block">
+              <div class="flex items-start justify-between">
+                <div class="flex items-start space-x-4">
+                  <div class="flex-shrink-0 mt-1">
+                    <%= if job.type == "export" do %>
+                      <.icon name="hero-arrow-down-tray" class="h-8 w-8 text-blue-600" />
+                    <% else %>
+                      <.icon name="hero-arrow-up-tray" class="h-8 w-8 text-green-600" />
+                    <% end %>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center space-x-2 mb-2">
+                      <h3 class="text-lg font-semibold text-base-content">
+                        <%= String.capitalize(job.type) %> Job
+                      </h3>
+                      <div class={"badge #{if(job.status == "completed", do: "badge-success", else: if(job.status == "failed", do: "badge-error", else: if(job.status == "processing", do: "badge-info", else: "badge-warning")))}"}>
+                        <%= status_text(job.status) %>
+                      </div>
+                    </div>
+
+                    <%= if job.file_name do %>
+                      <p class="text-sm text-base-content/70 font-medium mb-1">
+                        <.icon name="hero-document" class="h-4 w-4 mr-1 inline" />
+                        <%= job.file_name %>
+                      </p>
+                    <% end %>
+
+                    <div class="flex flex-wrap gap-4 text-sm text-base-content/60">
+                      <span>
+                        <.icon name="hero-clock" class="h-4 w-4 mr-1 inline" />
+                        Created <%= format_datetime(job.inserted_at) %>
+                      </span>
+                      <%= if job.completed_at do %>
+                        <span>
+                          <.icon name="hero-check-circle" class="h-4 w-4 mr-1 inline" />
+                          Completed <%= format_datetime(job.completed_at) %>
+                        </span>
+                      <% end %>
+                      <%= if job.file_size do %>
+                        <span>
+                          <.icon name="hero-archive-box" class="h-4 w-4 mr-1 inline" />
+                          <%= format_file_size(job.file_size) %>
+                        </span>
+                      <% end %>
+                    </div>
+
+                    <%= if job.status in ["processing", "pending"] and job.progress do %>
+                      <div class="mt-3">
+                        <div class="flex justify-between text-sm text-base-content/70 mb-2">
+                          <span>Progress</span>
+                          <span><%= job.progress %>%</span>
+                        </div>
+                        <progress class="progress progress-primary w-full" value={job.progress} max="100"></progress>
+                        <%= if job.processed_items and job.total_items do %>
+                          <p class="text-xs text-base-content/50 mt-1">
+                            <%= job.processed_items %> of <%= job.total_items %> items processed
+                          </p>
+                        <% end %>
+                      </div>
+                    <% end %>
+
+                    <%= if job.error_message do %>
+                      <div class="alert alert-error mt-3">
+                        <.icon name="hero-exclamation-triangle" class="h-4 w-4" />
+                        <span class="text-sm"><%= job.error_message %></span>
+                      </div>
+                    <% end %>
+                  </div>
+                </div>
+
+                <div class="flex-shrink-0">
+                  <.icon name="hero-chevron-right" class="h-5 w-5 text-base-content/40" />
+                </div>
+              </div>
+            </.link>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+</div>
+
+  </.admin_layout>
+</Layouts.app>

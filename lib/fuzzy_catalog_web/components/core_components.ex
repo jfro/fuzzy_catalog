@@ -29,6 +29,11 @@ defmodule FuzzyCatalogWeb.CoreComponents do
   use Phoenix.Component
   use Gettext, backend: FuzzyCatalogWeb.Gettext
 
+  use Phoenix.VerifiedRoutes,
+    endpoint: FuzzyCatalogWeb.Endpoint,
+    router: FuzzyCatalogWeb.Router,
+    statics: FuzzyCatalogWeb.static_paths()
+
   @doc """
   Renders flash notices.
 
@@ -451,5 +456,91 @@ defmodule FuzzyCatalogWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Renders the admin layout with navigation and content.
+
+  ## Examples
+
+      <.admin_layout current_page="import-export">
+        <h2>My Admin Page Content</h2>
+      </.admin_layout>
+  """
+  attr :current_page, :string, default: nil, doc: "the current admin page for navigation highlighting"
+  attr :title, :string, default: nil, doc: "optional page title"
+  attr :subtitle, :string, default: nil, doc: "optional page subtitle"
+
+  slot :inner_block, required: true, doc: "the admin page content"
+
+  def admin_layout(assigns) do
+    ~H"""
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-base-content">Admin Panel</h1>
+      <div class="mt-4">
+        <nav class="flex space-x-4">
+          <.link
+            navigate={~p"/admin"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "external-sync",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            External Sync
+          </.link>
+          <.link
+            navigate={~p"/admin/users"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "users",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            User Management
+          </.link>
+          <.link
+            navigate={~p"/admin/settings"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "settings",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            Settings
+          </.link>
+          <.link
+            navigate={~p"/admin/import-export"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "import-export",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            Import/Export
+          </.link>
+        </nav>
+      </div>
+    </div>
+
+    <%= if @title do %>
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-base-content"><%= @title %></h2>
+        <%= if @subtitle do %>
+          <p class="mt-2 text-base-content/70"><%= @subtitle %></p>
+        <% end %>
+      </div>
+    <% end %>
+
+    <%= render_slot(@inner_block) %>
+    """
   end
 end

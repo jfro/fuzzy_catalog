@@ -73,6 +73,7 @@ defmodule FuzzyCatalogWeb.Router do
     get "/users/settings/confirm-email/:token", UserSettingsController, :confirm_email
     post "/users/settings/confirm-account", UserSettingsController, :send_confirmation
     get "/users/settings/confirm-account/:token", UserSettingsController, :confirm_account
+
   end
 
   scope "/admin", FuzzyCatalogWeb do
@@ -81,6 +82,18 @@ defmodule FuzzyCatalogWeb.Router do
     live "/", AdminLive, :index
     live "/users", AdminUsersLive, :index
     live "/settings", AdminSettingsLive, :index
+
+    # Import/Export routes
+    get "/import-export", ImportExportController, :index
+    get "/import-export/export/new", ImportExportController, :new_export
+    post "/import-export/export", ImportExportController, :create_export
+    get "/import-export/import/new", ImportExportController, :new_import
+    post "/import-export/import", ImportExportController, :create_import
+    get "/import-export/:id", ImportExportController, :show
+    get "/import-export/:id/preview", ImportExportController, :preview_import
+    post "/import-export/:id/confirm", ImportExportController, :confirm_import
+    get "/import-export/:id/download", ImportExportController, :download
+    delete "/import-export/:id", ImportExportController, :delete
   end
 
   scope "/", FuzzyCatalogWeb do

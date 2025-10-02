@@ -87,6 +87,50 @@ defmodule FuzzyCatalog.Storage do
   def cover_exists?(nil), do: false
 
   @doc """
+  Store a file at the specified path.
+
+  ## Parameters
+    - source_path: The local file path to store
+    - target_path: The target storage path
+
+  ## Returns
+    - {:ok, storage_path} on success
+    - {:error, reason} on failure
+  """
+  def store_file(source_path, target_path) when is_binary(source_path) and is_binary(target_path) do
+    if File.exists?(source_path) do
+      case File.read(source_path) do
+        {:ok, file_content} ->
+          case backend().store(target_path, file_content) do
+            {:ok, _} -> {:ok, target_path}
+            error -> error
+          end
+
+        {:error, reason} ->
+          {:error, "Failed to read source file: #{reason}"}
+      end
+    else
+      {:error, "Source file does not exist: #{source_path}"}
+    end
+  end
+
+  @doc """
+  Get the URL for a stored file.
+
+  ## Parameters
+    - storage_path: The storage path for the file
+
+  ## Returns
+    - {:ok, url} on success
+    - {:error, reason} if file doesn't exist or other error
+  """
+  def get_file_url(storage_path) when is_binary(storage_path) do
+    backend().retrieve_url(storage_path)
+  end
+
+  def get_file_url(nil), do: {:error, :no_path}
+
+  @doc """
   Download and store a cover image from a URL.
 
   ## Parameters

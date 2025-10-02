@@ -1,0 +1,123 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.admin_layout current_page="import-export" title="Export Catalog Data" subtitle="Export your catalog with optional filters">
+
+<div class="card bg-base-100 shadow-lg">
+  <div class="card-body">
+    <h3 class="card-title text-xl font-semibold text-base-content mb-4">
+      <.icon name="hero-arrow-down-tray" class="h-6 w-6 mr-2 text-blue-600" />
+      Export Configuration
+    </h3>
+
+    <.form :let={_f} for={@changeset} action={~p"/admin/import-export/export"}>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="space-y-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Export Format</span>
+            </label>
+            <select name="job[filters][format]" id="format" class="select select-bordered w-full">
+              <option value="">Choose format...</option>
+              <%= for format <- @filter_options.formats do %>
+                <option value={format} selected={format == "json"}><%= String.upcase(format) %></option>
+              <% end %>
+            </select>
+            <label class="label">
+              <span class="label-text-alt text-base-content/60">JSON preserves all data, CSV works with spreadsheets</span>
+            </label>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Media Type</span>
+            </label>
+            <select name="job[filters][media_type]" id="media_type" class="select select-bordered w-full">
+              <option value="">All media types</option>
+              <%= for media_type <- @filter_options.media_types do %>
+                <option value={media_type}><%= String.capitalize(media_type) %></option>
+              <% end %>
+            </select>
+            <label class="label">
+              <span class="label-text-alt text-base-content/60">Filter by specific media type</span>
+            </label>
+          </div>
+
+          <div class="form-control">
+            <label class="cursor-pointer label justify-start">
+              <input type="checkbox" name="job[filters][no_external_id]" value="true" class="checkbox checkbox-primary mr-3" />
+              <span class="label-text font-medium">Items without external links only</span>
+            </label>
+            <div class="ml-8">
+              <span class="label-text-alt text-base-content/60">Books not linked to Audiobookshelf, etc.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Genre Filter</span>
+            </label>
+            <select name="job[filters][genre]" id="genre" class="select select-bordered w-full">
+              <option value="">All genres</option>
+              <%= for genre <- @filter_options.genres do %>
+                <option value={genre}><%= genre %></option>
+              <% end %>
+            </select>
+            <label class="label">
+              <span class="label-text-alt text-base-content/60">Filter by specific genre</span>
+            </label>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Series Filter</span>
+            </label>
+            <input type="text" name="job[filters][series]" id="series" placeholder="e.g., Harry Potter" class="input input-bordered w-full" />
+            <label class="label">
+              <span class="label-text-alt text-base-content/60">Partial matches supported</span>
+            </label>
+          </div>
+
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Added After Date</span>
+            </label>
+            <input type="date" name="job[filters][date_from]" id="date_from" class="input input-bordered w-full" />
+            <label class="label">
+              <span class="label-text-alt text-base-content/60">Only items added after this date</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="flex flex-col sm:flex-row gap-3 justify-end">
+        <.link href={~p"/admin/import-export"} class="btn btn-ghost">
+          <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" />
+          Cancel
+        </.link>
+        <button type="submit" class="btn btn-primary">
+          <.icon name="hero-play" class="h-4 w-4 mr-2" />
+          Start Export
+        </button>
+      </div>
+    </.form>
+  </div>
+</div>
+
+<div class="mt-8 border-t border-gray-200 pt-8">
+  <h3 class="text-lg font-medium text-gray-900">Export Information</h3>
+  <div class="mt-4 text-sm text-gray-600">
+    <ul class="list-disc list-inside space-y-1">
+      <li>Export files are available for download for 7 days after creation</li>
+      <li>JSON format includes all metadata and preserves data types</li>
+      <li>CSV format is suitable for importing into spreadsheet applications</li>
+      <li>Large exports may take a few minutes to process</li>
+      <li>You'll receive a notification when your export is ready</li>
+    </ul>
+  </div>
+</div>
+
+  </.admin_layout>
+</Layouts.app>

@@ -1,0 +1,151 @@
+<Layouts.app flash={@flash} current_scope={@current_scope}>
+  <.admin_layout current_page="import-export">
+    <div class="mb-8 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-bold text-base-content">Import Preview</h2>
+        <p class="mt-2 text-base-content/70">
+          Review your import data before proceeding
+        </p>
+      </div>
+      <div class="flex space-x-3">
+        <.link href={~p"/admin/import-export/#{@job.id}"} method="delete" data-confirm="Are you sure? This will delete the uploaded file." class="btn btn-outline btn-error">
+          <.icon name="hero-x-mark" class="h-4 w-4 mr-2" />
+          Cancel Import
+        </.link>
+        <.link href={~p"/admin/import-export/#{@job.id}/confirm"} method="post" class="btn btn-success">
+          <.icon name="hero-check" class="h-4 w-4 mr-2" />
+          Confirm Import
+        </.link>
+      </div>
+    </div>
+
+<div class="mt-8">
+  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Import Summary</h3>
+      <p class="mt-1 max-w-2xl text-sm text-gray-500">
+        File: <%= @job.file_name %> • Format: <%= String.upcase(@preview_data.format) %> • Total Items: <%= @preview_data.total_items %>
+      </p>
+    </div>
+
+    <%= if @preview_data.validation_errors != [] do %>
+      <div class="border-t border-gray-200 bg-red-50 px-4 py-5">
+        <h4 class="text-sm font-medium text-red-800">Validation Errors</h4>
+        <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+          <%= for error <- @preview_data.validation_errors do %>
+            <li><%= error %></li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
+
+    <div class="border-t border-gray-200">
+      <div class="px-4 py-5 sm:px-6">
+        <h4 class="text-sm font-medium text-gray-900">Preview Data (First 10 items)</h4>
+        <p class="mt-1 text-sm text-gray-500">Review the data that will be imported into your catalog.</p>
+      </div>
+
+      <%= if @preview_data.format == "csv" do %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <%= for header <- @preview_data.headers do %>
+                  <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <%= header %>
+                  </th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <%= for row <- @preview_data.preview_items do %>
+                <tr>
+                  <%= for cell <- row do %>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <%= cell %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% else %>
+        <div class="px-4 pb-5">
+          <%= for item <- @preview_data.preview_items do %>
+            <div class="mb-4 p-4 bg-gray-50 rounded-lg">
+              <%= if item["book"] do %>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 class="text-sm font-medium text-gray-900">Book Information</h5>
+                    <dl class="mt-2 text-sm text-gray-600">
+                      <%= if item["book"]["title"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-20">Title:</dt>
+                          <dd><%= item["book"]["title"] %></dd>
+                        </div>
+                      <% end %>
+                      <%= if item["book"]["author"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-20">Author:</dt>
+                          <dd><%= item["book"]["author"] %></dd>
+                        </div>
+                      <% end %>
+                      <%= if item["book"]["isbn13"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-20">ISBN13:</dt>
+                          <dd><%= item["book"]["isbn13"] %></dd>
+                        </div>
+                      <% end %>
+                      <%= if item["book"]["genre"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-20">Genre:</dt>
+                          <dd><%= item["book"]["genre"] %></dd>
+                        </div>
+                      <% end %>
+                    </dl>
+                  </div>
+                  <div>
+                    <h5 class="text-sm font-medium text-gray-900">Collection Information</h5>
+                    <dl class="mt-2 text-sm text-gray-600">
+                      <%= if item["media_type"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-24">Media Type:</dt>
+                          <dd><%= item["media_type"] %></dd>
+                        </div>
+                      <% end %>
+                      <%= if item["added_at"] do %>
+                        <div class="flex">
+                          <dt class="font-medium w-24">Added At:</dt>
+                          <dd><%= item["added_at"] %></dd>
+                        </div>
+                      <% end %>
+                    </dl>
+                  </div>
+                </div>
+              <% else %>
+                <pre class="text-xs text-gray-600 overflow-x-auto"><%= Jason.encode!(item, pretty: true) %></pre>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<div class="mt-8 border-t border-gray-200 pt-8">
+  <h3 class="text-lg font-medium text-gray-900">Import Process</h3>
+  <div class="mt-4 text-sm text-gray-600">
+    <ul class="list-disc list-inside space-y-1">
+      <li>Books will be matched against existing catalog entries by ISBN, then by title and author</li>
+      <li>Duplicate books will be skipped to avoid creating duplicate entries</li>
+      <li>New books will be created and added to your collection with the specified media type</li>
+      <li>The import process runs in the background and you can monitor progress</li>
+      <li>You'll be notified when the import is complete</li>
+    </ul>
+  </div>
+</div>
+
+  </.admin_layout>
+</Layouts.app>
