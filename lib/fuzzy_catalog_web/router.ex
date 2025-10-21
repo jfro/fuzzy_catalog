@@ -59,6 +59,7 @@ defmodule FuzzyCatalogWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     post "/books/lookup", BookController, :lookup
+    post "/books/add-from-lookup", BookController, :add_from_lookup
     post "/books/scan", BookController, :scan_barcode
     get "/books/batch-scanner", BookController, :batch_scanner
     post "/books/batch-check", BookController, :batch_check

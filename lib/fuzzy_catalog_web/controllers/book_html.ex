@@ -335,4 +335,29 @@ defmodule FuzzyCatalogWeb.BookHTML do
   end
 
   def calibre_url(_), do: nil
+
+  @doc """
+  Safely extracts a cover URL string from various formats.
+
+  Handles cases where cover_url might be:
+  - A string URL (returns as-is)
+  - A map with "url" key (extracts the URL)
+  - nil or empty (returns empty string)
+
+  ## Examples
+
+      iex> safe_cover_url("https://example.com/image.jpg")
+      "https://example.com/image.jpg"
+
+      iex> safe_cover_url(%{"url" => "https://example.com/image.jpg"})
+      "https://example.com/image.jpg"
+
+      iex> safe_cover_url(nil)
+      ""
+  """
+  def safe_cover_url(nil), do: ""
+  def safe_cover_url(""), do: ""
+  def safe_cover_url(%{"url" => url}) when is_binary(url), do: url
+  def safe_cover_url(url) when is_binary(url), do: url
+  def safe_cover_url(_), do: ""
 end

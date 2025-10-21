@@ -10,12 +10,14 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   require Logger
 
   alias FuzzyCatalog.Catalog.Providers.{
+    HardcoverProvider,
     OpenLibraryProvider,
     GoogleBooksProvider,
     LibraryOfCongressProvider
   }
 
   @default_providers [
+    HardcoverProvider,
     OpenLibraryProvider,
     GoogleBooksProvider,
     LibraryOfCongressProvider
@@ -54,19 +56,7 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
       {:error, "Title cannot be empty"}
   """
   def lookup_by_title(title) when is_binary(title) do
-    case get_providers() do
-      [primary_provider | _] ->
-        case primary_provider.lookup_by_title(title) do
-          {:ok, books} when is_list(books) ->
-            {:ok, Enum.map(books, &normalize_book_data/1)}
-
-          result ->
-            result
-        end
-
-      [] ->
-        {:error, "No providers configured"}
-    end
+    try_providers_for_title(get_providers(), title)
   end
 
   @doc """
@@ -195,16 +185,38 @@ defmodule FuzzyCatalog.Catalog.BookLookup do
   end
 
   defp try_providers_for_isbn([provider | remaining_providers], isbn) do
-    Logger.info("Trying provider: #{provider.provider_name()}")
-
     case provider.lookup_by_isbn(isbn) do
       {:ok, book_data} ->
         Logger.info("Success with provider: #{provider.provider_name()}")
         {:ok, normalize_book_data(book_data)}
 
+      {:error, "Not configured"} ->
+        Logger.debug("Skipping #{provider.provider_name()}: not configured")
+        try_providers_for_isbn(remaining_providers, isbn)
+
       {:error, reason} ->
         Logger.info("Failed with provider #{provider.provider_name()}: #{reason}")
         try_providers_for_isbn(remaining_providers, isbn)
+    end
+  end
+
+  defp try_providers_for_title([], _title) do
+    {:error, "No providers available"}
+  end
+
+  defp try_providers_for_title([provider | remaining_providers], title) do
+    case provider.lookup_by_title(title) do
+      {:ok, books} when is_list(books) ->
+        Logger.info("Success with provider: #{provider.provider_name()}")
+        {:ok, Enum.map(books, &normalize_book_data/1)}
+
+      {:error, "Not configured"} ->
+        Logger.debug("Skipping #{provider.provider_name()}: not configured")
+        try_providers_for_title(remaining_providers, title)
+
+      {:error, reason} ->
+        Logger.info("Failed with provider #{provider.provider_name()}: #{reason}")
+        try_providers_for_title(remaining_providers, title)
     end
   end
 

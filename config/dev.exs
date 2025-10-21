@@ -110,3 +110,8 @@ config :fuzzy_catalog, :storage,
     base_path: System.get_env("UPLOAD_PATH") || "priv/static/uploads",
     base_url: "/uploads"
   ]
+
+# Email configuration for development
+config :fuzzy_catalog, :email,
+  from_name: "FuzzyCatalog Dev",
+  from_address: "noreply@localhost"
