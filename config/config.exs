@@ -27,10 +27,15 @@ config :fuzzy_catalog,
 # Book lookup provider configuration
 config :fuzzy_catalog, :book_lookup,
   providers: [
+    FuzzyCatalog.Catalog.Providers.HardcoverProvider,
     FuzzyCatalog.Catalog.Providers.OpenLibraryProvider,
     FuzzyCatalog.Catalog.Providers.GoogleBooksProvider,
     FuzzyCatalog.Catalog.Providers.LibraryOfCongressProvider
   ]
+
+# Hardcover API configuration
+# Get your API token from https://hardcover.app/settings/api
+config :fuzzy_catalog, :hardcover_api_token, System.get_env("HARDCOVER_API_TOKEN")
 
 # File storage configuration
 config :fuzzy_catalog, :storage,
