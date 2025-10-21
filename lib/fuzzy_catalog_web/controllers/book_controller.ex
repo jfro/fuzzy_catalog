@@ -100,6 +100,31 @@ defmodule FuzzyCatalogWeb.BookController do
     render(conn, :new, changeset: changeset, lookup_error: "Invalid lookup parameters")
   end
 
+  def add_from_lookup(conn, %{"book" => book_params}) do
+    # Prepare book params with default media type
+    processed_params =
+      book_params
+      |> Map.put("media_type", "unspecified")
+      |> download_cover_from_params()
+
+    case Catalog.create_book(processed_params) do
+      {:ok, book} ->
+        conn
+        |> put_flash(:info, "Book '#{book.title}' successfully added to library!")
+        |> redirect(to: ~p"/books/#{book}")
+
+      {:error, changeset} ->
+        # Fall back to showing the manual entry form with the error
+        render(conn, :new, changeset: changeset)
+    end
+  end
+
+  def add_from_lookup(conn, _params) do
+    conn
+    |> put_flash(:error, "Invalid book data")
+    |> redirect(to: ~p"/books/new")
+  end
+
   def scan_barcode(conn, params) do
     Logger.info("scan_barcode called with params: #{inspect(params)}")
 

@@ -257,12 +257,13 @@
                       </p>
                     <% end %>
                   </div>
-                  <.form :let={_f} for={%{}} action={~p"/books/new"} method="get">
-                    <input type="hidden" name="title" value={book.title} />
-                    <input type="hidden" name="author" value={book.author} />
-                    <input type="hidden" name="isbn10" value={book.isbn10 || ""} />
-                    <input type="hidden" name="isbn13" value={book.isbn13 || ""} />
-                    <.button type="submit" class="btn btn-xs btn-outline">Use This Book</.button>
+                  <.form :let={f} for={%{}} action={~p"/books/add-from-lookup"} method="post">
+                    <input type="hidden" name="book[title]" value={book.title} />
+                    <input type="hidden" name="book[author]" value={book.author} />
+                    <input type="hidden" name="book[isbn10]" value={book.isbn10 || ""} />
+                    <input type="hidden" name="book[isbn13]" value={book.isbn13 || ""} />
+                    <input type="hidden" name="book[cover_url]" value={safe_cover_url(book.cover_url)} />
+                    <.button type="submit" class="btn btn-xs btn-outline">Add to Library</.button>
                   </.form>
                 </div>
               </div>
@@ -277,12 +278,13 @@
                 Published: {format_publication_date(@lookup_results.publication_date)}
               </p>
             <% end %>
-            <.form :let={_f} for={%{}} action={~p"/books/new"} method="get" class="mt-2">
-              <input type="hidden" name="title" value={@lookup_results.title} />
-              <input type="hidden" name="author" value={@lookup_results.author} />
-              <input type="hidden" name="isbn10" value={@lookup_results.isbn10 || ""} />
-              <input type="hidden" name="isbn13" value={@lookup_results.isbn13 || ""} />
-              <.button type="submit" class="btn btn-sm btn-primary">Use This Book</.button>
+            <.form :let={f} for={%{}} action={~p"/books/add-from-lookup"} method="post" class="mt-2">
+              <input type="hidden" name="book[title]" value={@lookup_results.title} />
+              <input type="hidden" name="book[author]" value={@lookup_results.author} />
+              <input type="hidden" name="book[isbn10]" value={@lookup_results.isbn10 || ""} />
+              <input type="hidden" name="book[isbn13]" value={@lookup_results.isbn13 || ""} />
+              <input type="hidden" name="book[cover_url]" value={safe_cover_url(@lookup_results.cover_url)} />
+              <.button type="submit" class="btn btn-sm btn-primary">Add to Library</.button>
             </.form>
           </div>
         <% end %>

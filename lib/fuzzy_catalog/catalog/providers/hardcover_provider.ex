@@ -216,7 +216,7 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
     publication_date = parse_release_year(book_data["release_year"])
 
     # Extract cover image URL (if available)
-    cover_url = book_data["image"] || book_data["cover_url"]
+    cover_url = extract_cover_url(book_data["image"]) || book_data["cover_url"]
 
     %{
       title: book_data["title"] || "Unknown Title",
@@ -235,6 +235,11 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
       suggested_media_types: []
     }
   end
+
+  defp extract_cover_url(nil), do: nil
+  defp extract_cover_url(%{"url" => url}) when is_binary(url), do: url
+  defp extract_cover_url(url) when is_binary(url), do: url
+  defp extract_cover_url(_), do: nil
 
   defp extract_authors([]), do: "Unknown Author"
   defp extract_authors(nil), do: "Unknown Author"
