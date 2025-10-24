@@ -459,6 +459,11 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
     # Extract cover image URL (if available)
     cover_url = extract_cover_url(book_data["image"]) || book_data["cover_url"]
 
+    # Search results don't include edition_format in the document
+    # They aggregate all editions, so format info isn't available
+    # Users can get format by doing an ISBN lookup instead
+    media_types = []
+
     %{
       title: book_data["title"] || "Unknown Title",
       subtitle: book_data["subtitle"],
@@ -473,7 +478,7 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
       series: series,
       series_number: nil,
       cover_url: cover_url,
-      suggested_media_types: []
+      suggested_media_types: media_types
     }
   end
 

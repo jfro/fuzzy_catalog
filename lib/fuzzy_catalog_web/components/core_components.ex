@@ -467,7 +467,10 @@ defmodule FuzzyCatalogWeb.CoreComponents do
         <h2>My Admin Page Content</h2>
       </.admin_layout>
   """
-  attr :current_page, :string, default: nil, doc: "the current admin page for navigation highlighting"
+  attr :current_page, :string,
+    default: nil,
+    doc: "the current admin page for navigation highlighting"
+
   attr :title, :string, default: nil, doc: "optional page title"
   attr :subtitle, :string, default: nil, doc: "optional page subtitle"
 
@@ -533,14 +536,14 @@ defmodule FuzzyCatalogWeb.CoreComponents do
 
     <%= if @title do %>
       <div class="mb-8">
-        <h2 class="text-2xl font-bold text-base-content"><%= @title %></h2>
+        <h2 class="text-2xl font-bold text-base-content">{@title}</h2>
         <%= if @subtitle do %>
-          <p class="mt-2 text-base-content/70"><%= @subtitle %></p>
+          <p class="mt-2 text-base-content/70">{@subtitle}</p>
         <% end %>
       </div>
     <% end %>
 
-    <%= render_slot(@inner_block) %>
+    {render_slot(@inner_block)}
     """
   end
 end

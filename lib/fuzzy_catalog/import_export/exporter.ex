@@ -130,7 +130,9 @@ defmodule FuzzyCatalog.ImportExport.Exporter do
     descriptions = []
 
     descriptions =
-      if media_type = filters["media_type"], do: ["Media type: #{media_type}" | descriptions], else: descriptions
+      if media_type = filters["media_type"],
+        do: ["Media type: #{media_type}" | descriptions],
+        else: descriptions
 
     descriptions =
       if filters["no_external_id"] == "true",
@@ -138,7 +140,9 @@ defmodule FuzzyCatalog.ImportExport.Exporter do
         else: descriptions
 
     descriptions =
-      if date_from = filters["date_from"], do: ["Added after: #{date_from}" | descriptions], else: descriptions
+      if date_from = filters["date_from"],
+        do: ["Added after: #{date_from}" | descriptions],
+        else: descriptions
 
     descriptions =
       if series = filters["series"], do: ["Series: #{series}" | descriptions], else: descriptions
@@ -330,6 +334,7 @@ defmodule FuzzyCatalog.ImportExport.Exporter do
   end
 
   defp escape_csv_field(nil), do: ""
+
   defp escape_csv_field(value) when is_binary(value) do
     if String.contains?(value, [",", "\"", "\n", "\r"]) do
       "\"#{String.replace(value, "\"", "\"\"")}\""
@@ -337,6 +342,7 @@ defmodule FuzzyCatalog.ImportExport.Exporter do
       value
     end
   end
+
   defp escape_csv_field(value), do: to_string(value)
 
   defp store_and_complete_job(%Job{} = job, temp_path, filename) do

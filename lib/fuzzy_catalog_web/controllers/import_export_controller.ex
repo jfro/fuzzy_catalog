@@ -28,7 +28,10 @@ defmodule FuzzyCatalogWeb.ImportExportController do
         spawn(fn -> Exporter.perform_export(job) end)
 
         conn
-        |> put_flash(:info, "Export job started successfully. You'll be able to download the file when it's ready.")
+        |> put_flash(
+          :info,
+          "Export job started successfully. You'll be able to download the file when it's ready."
+        )
         |> redirect(to: ~p"/admin/import-export")
 
       {:error, changeset} ->
@@ -63,7 +66,10 @@ defmodule FuzzyCatalogWeb.ImportExportController do
             case ImportExport.create_import_job(current_user, job_attrs) do
               {:ok, job} ->
                 conn
-                |> put_flash(:info, "Import file uploaded successfully. Review the preview before importing.")
+                |> put_flash(
+                  :info,
+                  "Import file uploaded successfully. Review the preview before importing."
+                )
                 |> redirect(to: ~p"/admin/import-export/#{job.id}/preview")
 
               {:error, changeset} ->
