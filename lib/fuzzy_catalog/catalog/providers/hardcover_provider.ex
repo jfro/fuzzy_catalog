@@ -19,11 +19,11 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
 
     case validate_isbn(clean_isbn) do
       :valid ->
-        query = build_search_query(clean_isbn, ["isbns"])
+        query = build_isbn_query(clean_isbn)
 
         case make_graphql_request(query) do
           {:ok, response} ->
-            parse_search_response(response, :single)
+            parse_editions_response(response)
 
           {:error, reason} ->
             {:error, reason}
@@ -74,6 +74,43 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
       true ->
         :invalid
     end
+  end
+
+  defp build_isbn_query(isbn) do
+    """
+    {
+      editions(where: {
+        _or: [
+          {isbn_10: {_eq: "#{escape_graphql_string(isbn)}"}},
+          {isbn_13: {_eq: "#{escape_graphql_string(isbn)}"}}
+        ]
+      }, limit: 1) {
+        id
+        title
+        subtitle
+        edition_format
+        isbn_10
+        isbn_13
+        pages
+        release_date
+        asin
+        audio_seconds
+        book {
+          id
+          title
+          description
+          cached_contributors
+          book_series {
+            series {
+              name
+            }
+          }
+          cached_tags
+          cached_image
+        }
+      }
+    }
+    """
   end
 
   defp build_search_query(query_string, fields) do
@@ -194,6 +231,210 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
     {:error, "Invalid response format"}
   end
 
+  defp parse_editions_response(%{"data" => %{"editions" => editions}}) when is_list(editions) do
+    case editions do
+      [] ->
+        {:error, "No results found"}
+
+      [edition | _] ->
+        {:ok, normalize_edition_data(edition)}
+    end
+  end
+
+  defp parse_editions_response(response) do
+    Logger.error("Hardcover: Unexpected editions response structure: #{inspect(response)}")
+    {:error, "Invalid response format"}
+  end
+
+  defp normalize_edition_data(edition) when is_map(edition) do
+    book_data = edition["book"] || %{}
+
+    # Extract edition format and map to media types
+    edition_format = edition["edition_format"]
+    media_types = map_edition_format_to_media_types(edition_format)
+
+    # Extract book-level data from cached fields
+    contributors = extract_from_cached(book_data["cached_contributors"])
+    description = book_data["description"]
+    book_series = book_data["book_series"] || []
+    tags = extract_from_cached(book_data["cached_tags"])
+    image = extract_from_cached(book_data["cached_image"])
+
+    # Parse publication date
+    publication_date = parse_date(edition["release_date"])
+
+    %{
+      title: edition["title"] || book_data["title"] || "Unknown Title",
+      subtitle: edition["subtitle"],
+      author: format_contributors(contributors),
+      isbn10: edition["isbn_10"],
+      isbn13: edition["isbn_13"],
+      publisher: nil,
+      publication_date: publication_date,
+      pages: edition["pages"],
+      genre: format_tags_as_genres(tags),
+      description: description,
+      series: format_book_series(book_series),
+      series_number: nil,
+      cover_url: extract_cover_url(image),
+      suggested_media_types: media_types
+    }
+  end
+
+  # Expose for testing
+  if Mix.env() == :test do
+    def __map_edition_format_to_media_types__(format),
+      do: map_edition_format_to_media_types(format)
+
+    def __extract_from_cached__(data), do: extract_from_cached(data)
+    def __format_contributors__(contributors), do: format_contributors(contributors)
+    def __format_genres__(genres), do: format_tags_as_genres(genres)
+    def __format_series__(series), do: format_book_series(series)
+  end
+
+  defp map_edition_format_to_media_types(nil), do: []
+  defp map_edition_format_to_media_types(""), do: []
+
+  defp map_edition_format_to_media_types(format) when is_binary(format) do
+    # Normalize format string (lowercase, trim)
+    normalized = format |> String.downcase() |> String.trim()
+
+    case normalized do
+      # Direct matches
+      "hardcover" ->
+        ["hardcover"]
+
+      "paperback" ->
+        ["paperback"]
+
+      "audiobook" ->
+        ["audiobook"]
+
+      "ebook" ->
+        ["ebook"]
+
+      "audio" ->
+        ["audiobook"]
+
+      "digital" ->
+        ["ebook"]
+
+      # Common variations
+      "mass market paperback" ->
+        ["paperback"]
+
+      "trade paperback" ->
+        ["paperback"]
+
+      "board book" ->
+        ["hardcover"]
+
+      "library binding" ->
+        ["hardcover"]
+
+      # Kindle/digital formats
+      format when format in ["kindle", "kindle edition"] ->
+        ["ebook"]
+
+      # Audio formats
+      format when format in ["audio cd", "audio download", "mp3 cd"] ->
+        ["audiobook"]
+
+      # Unknown
+      _ ->
+        Logger.debug("Unknown Hardcover edition_format: #{format}")
+        []
+    end
+  end
+
+  defp extract_from_cached(nil), do: nil
+
+  defp extract_from_cached(json) when is_binary(json) do
+    case Jason.decode(json) do
+      {:ok, data} -> data
+      {:error, _} -> nil
+    end
+  end
+
+  defp extract_from_cached(data) when is_map(data) or is_list(data), do: data
+
+  defp format_contributors(nil), do: "Unknown Author"
+  defp format_contributors([]), do: "Unknown Author"
+
+  defp format_contributors(contributors) when is_list(contributors) do
+    contributors
+    |> Enum.map(fn
+      %{"author" => %{"name" => name}} -> name
+      %{"name" => name} -> name
+      name when is_binary(name) -> name
+      _ -> nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> "Unknown Author"
+      names -> Enum.join(names, ", ")
+    end
+  end
+
+  defp format_book_series(nil), do: nil
+  defp format_book_series([]), do: nil
+
+  defp format_book_series(book_series) when is_list(book_series) do
+    # book_series is a list of %{"series" => %{"name" => "..."}}
+    book_series
+    |> Enum.map(fn
+      %{"series" => %{"name" => name}} -> name
+      _ -> nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> List.first()
+  end
+
+  defp format_tags_as_genres(nil), do: nil
+  defp format_tags_as_genres([]), do: nil
+
+  defp format_tags_as_genres(tags) when is_map(tags) do
+    # cached_tags is a map with genre/tag categories as keys
+    # Try to extract genre-like tags from the structure
+    tags
+    |> Map.values()
+    |> List.flatten()
+    |> Enum.take(3)
+    |> Enum.map(fn
+      %{"tag" => tag} -> tag
+      %{"name" => name} -> name
+      tag when is_binary(tag) -> tag
+      _ -> nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> nil
+      names -> Enum.join(names, ", ")
+    end
+  end
+
+  defp format_tags_as_genres(tags) when is_list(tags) do
+    tags
+    |> Enum.take(3)
+    |> Enum.map(fn
+      %{"tag" => tag} -> tag
+      %{"name" => name} -> name
+      tag when is_binary(tag) -> tag
+      _ -> nil
+    end)
+    |> Enum.reject(&is_nil/1)
+    |> case do
+      [] -> nil
+      names -> Enum.join(names, ", ")
+    end
+  end
+
+  defp parse_date(nil), do: nil
+
+  defp parse_date(date_str) when is_binary(date_str) do
+    FuzzyCatalog.DateUtils.parse_date(date_str)
+  end
+
   defp normalize_hardcover_data(book_data) when is_map(book_data) do
     # Extract ISBNs
     isbns = book_data["isbns"] || []
@@ -258,6 +499,7 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProvider do
   end
 
   defp parse_release_year(nil), do: nil
+
   defp parse_release_year(year) when is_integer(year) do
     FuzzyCatalog.DateUtils.parse_date(year)
   end

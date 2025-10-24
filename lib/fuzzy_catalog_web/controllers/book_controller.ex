@@ -101,10 +101,12 @@ defmodule FuzzyCatalogWeb.BookController do
   end
 
   def add_from_lookup(conn, %{"book" => book_params}) do
-    # Prepare book params with default media type
+    # Determine media type from suggested types or default to unspecified
+    media_type = determine_media_type(book_params)
+
     processed_params =
       book_params
-      |> Map.put("media_type", "unspecified")
+      |> Map.put("media_type", media_type)
       |> download_cover_from_params()
 
     case Catalog.create_book(processed_params) do
@@ -168,10 +170,15 @@ defmodule FuzzyCatalogWeb.BookController do
               book_data
               |> Enum.map(fn {k, v} -> {to_string(k), v} end)
               |> Map.new()
-              |> Map.put("media_type", "unspecified")
+
+            # Determine media type from suggested types or default to unspecified
+            media_type = determine_media_type(book_params)
 
             # Download and store cover if available
-            processed_params = download_cover_from_params(book_params)
+            processed_params =
+              book_params
+              |> Map.put("media_type", media_type)
+              |> download_cover_from_params()
 
             case Catalog.create_book(processed_params) do
               {:ok, book} ->
@@ -383,9 +390,16 @@ defmodule FuzzyCatalogWeb.BookController do
                 case Catalog.find_book_by_title_and_author(title, author) do
                   nil ->
                     # Step 4: Book doesn't exist, create it
+                    # Determine media type from suggested types or use the provided one
+                    determined_media_type =
+                      case determine_media_type(book_params) do
+                        "unspecified" -> media_type
+                        suggested_type -> suggested_type
+                      end
+
                     final_params =
                       book_params
-                      |> Map.put("media_type", media_type)
+                      |> Map.put("media_type", determined_media_type)
                       |> download_cover_from_params()
 
                     case Catalog.create_book(final_params) do
@@ -467,6 +481,23 @@ defmodule FuzzyCatalogWeb.BookController do
   end
 
   # Private helper functions
+
+  # Expose for testing
+  if Mix.env() == :test do
+    def __determine_media_type_test__(book_params), do: determine_media_type(book_params)
+  end
+
+  defp determine_media_type(book_params) do
+    case book_params["suggested_media_types"] do
+      types when is_list(types) and length(types) > 0 ->
+        # Use first suggested type
+        List.first(types)
+
+      _ ->
+        # Fall back to unspecified
+        "unspecified"
+    end
+  end
 
   defp process_cover_params(book_params, existing_book) do
     book_params
