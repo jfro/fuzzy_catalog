@@ -4,6 +4,7 @@ defmodule FuzzyCatalogWeb.ImportExportHTML do
   embed_templates "import_export_html/*"
 
   def format_file_size(nil), do: "Unknown"
+
   def format_file_size(bytes) when is_integer(bytes) do
     cond do
       bytes >= 1_073_741_824 -> "#{Float.round(bytes / 1_073_741_824, 2)} GB"
@@ -14,6 +15,7 @@ defmodule FuzzyCatalogWeb.ImportExportHTML do
   end
 
   def format_datetime(nil), do: ""
+
   def format_datetime(datetime) do
     Calendar.strftime(datetime, "%Y-%m-%d %H:%M:%S")
   end

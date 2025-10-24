@@ -97,7 +97,8 @@ defmodule FuzzyCatalog.Storage do
     - {:ok, storage_path} on success
     - {:error, reason} on failure
   """
-  def store_file(source_path, target_path) when is_binary(source_path) and is_binary(target_path) do
+  def store_file(source_path, target_path)
+      when is_binary(source_path) and is_binary(target_path) do
     if File.exists?(source_path) do
       case File.read(source_path) do
         {:ok, file_content} ->

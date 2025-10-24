@@ -2,153 +2,162 @@
   <.admin_layout current_page="import-export">
     <div class="mb-8 flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-bold text-base-content"><%= String.capitalize(@job.type) %> Job Details</h2>
+        <h2 class="text-2xl font-bold text-base-content">
+          {String.capitalize(@job.type)} Job Details
+        </h2>
         <p class="mt-2 text-base-content/70">
           <%= if @job.file_name do %>
-            File: <%= @job.file_name %>
+            File: {@job.file_name}
           <% else %>
-            Job #<%= @job.id %>
+            Job #{@job.id}
           <% end %>
         </p>
       </div>
       <div class="flex space-x-3">
         <%= if @job.type == "export" and @job.status == "completed" and @job.file_path do %>
           <.link href={~p"/admin/import-export/#{@job.id}/download"} class="btn btn-primary">
-            <.icon name="hero-arrow-down-tray" class="h-4 w-4 mr-2" />
-            Download File
+            <.icon name="hero-arrow-down-tray" class="h-4 w-4 mr-2" /> Download File
           </.link>
         <% end %>
-        <.link href={~p"/admin/import-export/#{@job.id}"} method="delete" data-confirm="Are you sure?" class="btn btn-outline btn-error">
-          <.icon name="hero-trash" class="h-4 w-4 mr-2" />
-          Delete Job
+        <.link
+          href={~p"/admin/import-export/#{@job.id}"}
+          method="delete"
+          data-confirm="Are you sure?"
+          class="btn btn-outline btn-error"
+        >
+          <.icon name="hero-trash" class="h-4 w-4 mr-2" /> Delete Job
         </.link>
       </div>
     </div>
 
-<div class="mt-8">
-  <div class="bg-white shadow overflow-hidden sm:rounded-lg">
-    <div class="px-4 py-5 sm:px-6">
-      <h3 class="text-lg leading-6 font-medium text-gray-900">Job Information</h3>
-      <p class="mt-1 max-w-2xl text-sm text-gray-500">Details and progress of this <%= @job.type %> job.</p>
-    </div>
-    <div class="border-t border-gray-200">
-      <dl>
-        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-          <dt class="text-sm font-medium text-gray-500">Status</dt>
-          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-            <span class={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{status_badge_class(@job.status)}"}>
-              <%= status_text(@job.status) %>
-            </span>
-          </dd>
+    <div class="mt-8">
+      <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+        <div class="px-4 py-5 sm:px-6">
+          <h3 class="text-lg leading-6 font-medium text-gray-900">Job Information</h3>
+          <p class="mt-1 max-w-2xl text-sm text-gray-500">
+            Details and progress of this {@job.type} job.
+          </p>
         </div>
-        <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-          <dt class="text-sm font-medium text-gray-500">Progress</dt>
-          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-            <%= if @job.status in ["processing", "pending"] or @job.progress do %>
-              <div class="flex items-center">
-                <div class="w-full bg-gray-200 rounded-full h-2 mr-3">
-                  <div class={"h-2 rounded-full #{progress_bar_class(@job.status)}"} style={"width: #{@job.progress || 0}%"}></div>
-                </div>
-                <span class="text-sm font-medium text-gray-700"><%= @job.progress || 0 %>%</span>
-              </div>
-              <%= if @job.processed_items and @job.total_items do %>
-                <p class="mt-1 text-xs text-gray-500">
-                  <%= @job.processed_items %> of <%= @job.total_items %> items processed
-                </p>
-              <% end %>
-            <% else %>
-              <span class="text-gray-500">—</span>
-            <% end %>
-          </dd>
-        </div>
-        <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-          <dt class="text-sm font-medium text-gray-500">Created</dt>
-          <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-            <%= format_datetime(@job.inserted_at) %>
-          </dd>
-        </div>
-        <%= if @job.completed_at do %>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">Completed</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <%= format_datetime(@job.completed_at) %>
-            </dd>
-          </div>
-        <% end %>
-        <%= if @job.file_name do %>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">File Name</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <%= @job.file_name %>
-            </dd>
-          </div>
-        <% end %>
-        <%= if @job.file_size do %>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">File Size</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <%= format_file_size(@job.file_size) %>
-            </dd>
-          </div>
-        <% end %>
-        <%= if @job.expires_at do %>
-          <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">Expires</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <%= format_datetime(@job.expires_at) %>
-            </dd>
-          </div>
-        <% end %>
-        <%= if @job.filters and map_size(@job.filters) > 0 do %>
-          <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-gray-500">Filters Applied</dt>
-            <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-              <ul class="text-sm text-gray-600">
-                <%= for {key, value} <- @job.filters do %>
-                  <%= if value not in [nil, "", false] do %>
-                    <li>
-                      <strong><%= String.replace(key, "_", " ") |> String.capitalize() %>:</strong>
-                      <%= case key do %>
-                        <% "no_external_id" -> %>
-                          Items without external library links
-                        <% _ -> %>
-                          <%= value %>
-                      <% end %>
-                    </li>
+        <div class="border-t border-gray-200">
+          <dl>
+            <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt class="text-sm font-medium text-gray-500">Status</dt>
+              <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <span class={"inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium #{status_badge_class(@job.status)}"}>
+                  {status_text(@job.status)}
+                </span>
+              </dd>
+            </div>
+            <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt class="text-sm font-medium text-gray-500">Progress</dt>
+              <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                <%= if @job.status in ["processing", "pending"] or @job.progress do %>
+                  <div class="flex items-center">
+                    <div class="w-full bg-gray-200 rounded-full h-2 mr-3">
+                      <div
+                        class={"h-2 rounded-full #{progress_bar_class(@job.status)}"}
+                        style={"width: #{@job.progress || 0}%"}
+                      >
+                      </div>
+                    </div>
+                    <span class="text-sm font-medium text-gray-700">{@job.progress || 0}%</span>
+                  </div>
+                  <%= if @job.processed_items and @job.total_items do %>
+                    <p class="mt-1 text-xs text-gray-500">
+                      {@job.processed_items} of {@job.total_items} items processed
+                    </p>
                   <% end %>
+                <% else %>
+                  <span class="text-gray-500">—</span>
                 <% end %>
-              </ul>
-            </dd>
-          </div>
-        <% end %>
-        <%= if @job.error_message do %>
-          <div class="bg-red-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
-            <dt class="text-sm font-medium text-red-800">Error</dt>
-            <dd class="mt-1 text-sm text-red-700 sm:mt-0 sm:col-span-2">
-              <%= @job.error_message %>
-            </dd>
-          </div>
-        <% end %>
-      </dl>
+              </dd>
+            </div>
+            <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+              <dt class="text-sm font-medium text-gray-500">Created</dt>
+              <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                {format_datetime(@job.inserted_at)}
+              </dd>
+            </div>
+            <%= if @job.completed_at do %>
+              <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-gray-500">Completed</dt>
+                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {format_datetime(@job.completed_at)}
+                </dd>
+              </div>
+            <% end %>
+            <%= if @job.file_name do %>
+              <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-gray-500">File Name</dt>
+                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {@job.file_name}
+                </dd>
+              </div>
+            <% end %>
+            <%= if @job.file_size do %>
+              <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-gray-500">File Size</dt>
+                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {format_file_size(@job.file_size)}
+                </dd>
+              </div>
+            <% end %>
+            <%= if @job.expires_at do %>
+              <div class="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-gray-500">Expires</dt>
+                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  {format_datetime(@job.expires_at)}
+                </dd>
+              </div>
+            <% end %>
+            <%= if @job.filters and map_size(@job.filters) > 0 do %>
+              <div class="bg-white px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-gray-500">Filters Applied</dt>
+                <dd class="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
+                  <ul class="text-sm text-gray-600">
+                    <%= for {key, value} <- @job.filters do %>
+                      <%= if value not in [nil, "", false] do %>
+                        <li>
+                          <strong>{String.replace(key, "_", " ") |> String.capitalize()}:</strong>
+                          <%= case key do %>
+                            <% "no_external_id" -> %>
+                              Items without external library links
+                            <% _ -> %>
+                              {value}
+                          <% end %>
+                        </li>
+                      <% end %>
+                    <% end %>
+                  </ul>
+                </dd>
+              </div>
+            <% end %>
+            <%= if @job.error_message do %>
+              <div class="bg-red-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
+                <dt class="text-sm font-medium text-red-800">Error</dt>
+                <dd class="mt-1 text-sm text-red-700 sm:mt-0 sm:col-span-2">
+                  {@job.error_message}
+                </dd>
+              </div>
+            <% end %>
+          </dl>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<div class="mt-6">
-  <.link href={~p"/admin/import-export"} class="btn btn-outline">
-    <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" />
-    Back to Import/Export
-  </.link>
-</div>
+    <div class="mt-6">
+      <.link href={~p"/admin/import-export"} class="btn btn-outline">
+        <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" /> Back to Import/Export
+      </.link>
+    </div>
 
-<%= if @job.status in ["processing", "pending"] do %>
-  <script>
-    // Auto-refresh page every 5 seconds for active jobs
-    setTimeout(function() {
-      window.location.reload();
-    }, 5000);
-  </script>
-<% end %>
-
+    <%= if @job.status in ["processing", "pending"] do %>
+      <script>
+        // Auto-refresh page every 5 seconds for active jobs
+        setTimeout(function() {
+          window.location.reload();
+        }, 5000);
+      </script>
+    <% end %>
   </.admin_layout>
 </Layouts.app>

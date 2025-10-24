@@ -1,76 +1,95 @@
 <Layouts.app flash={@flash} current_scope={@current_scope}>
-  <.admin_layout current_page="import-export" title="Import Catalog Data" subtitle="Import books and media from a JSON or CSV file">
+  <.admin_layout
+    current_page="import-export"
+    title="Import Catalog Data"
+    subtitle="Import books and media from a JSON or CSV file"
+  >
+    <div class="card bg-base-100 shadow-lg">
+      <div class="card-body">
+        <h3 class="card-title text-xl font-semibold text-base-content mb-4">
+          <.icon name="hero-arrow-up-tray" class="h-6 w-6 mr-2 text-green-600" />
+          Import Configuration
+        </h3>
 
-<div class="card bg-base-100 shadow-lg">
-  <div class="card-body">
-    <h3 class="card-title text-xl font-semibold text-base-content mb-4">
-      <.icon name="hero-arrow-up-tray" class="h-6 w-6 mr-2 text-green-600" />
-      Import Configuration
-    </h3>
+        <.form
+          :let={_f}
+          for={@changeset}
+          action={~p"/admin/import-export/import"}
+          multipart={true}
+        >
+          <div class="form-control">
+            <label class="label">
+              <span class="label-text font-medium">Select Import File</span>
+            </label>
 
-    <.form :let={_f} for={@changeset} action={~p"/admin/import-export/import"} multipart={true}>
-      <div class="form-control">
-        <label class="label">
-          <span class="label-text font-medium">Select Import File</span>
-        </label>
+            <div class="flex justify-center px-6 pt-8 pb-8 border-2 border-dashed border-base-300 rounded-lg bg-base-50 hover:bg-base-100 transition-colors">
+              <div class="space-y-3 text-center">
+                <.icon
+                  name="hero-document-arrow-up"
+                  class="mx-auto h-16 w-16 text-base-content/40"
+                />
 
-        <div class="flex justify-center px-6 pt-8 pb-8 border-2 border-dashed border-base-300 rounded-lg bg-base-50 hover:bg-base-100 transition-colors">
-          <div class="space-y-3 text-center">
-            <.icon name="hero-document-arrow-up" class="mx-auto h-16 w-16 text-base-content/40" />
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1">
+                  <label
+                    for="file"
+                    class="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary-focus focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary"
+                  >
+                    <span class="btn btn-primary btn-sm">Choose File</span>
+                    <input
+                      id="file"
+                      name="file"
+                      type="file"
+                      class="sr-only"
+                      accept=".json,.csv"
+                      required
+                    />
+                  </label>
+                  <span class="text-base-content/60">or drag and drop</span>
+                </div>
 
-            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-1">
-              <label for="file" class="relative cursor-pointer rounded-md font-medium text-primary hover:text-primary-focus focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-primary">
-                <span class="btn btn-primary btn-sm">Choose File</span>
-                <input id="file" name="file" type="file" class="sr-only" accept=".json,.csv" required>
+                <div class="flex flex-col gap-1">
+                  <p class="text-sm text-base-content/60 font-medium">
+                    JSON or CSV files up to 10MB
+                  </p>
+                  <p class="text-xs text-base-content/50">
+                    Supported formats: .json, .csv
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <%= if message = @changeset.errors[:file] do %>
+              <label class="label">
+                <span class="label-text-alt text-error">
+                  <.icon name="hero-exclamation-triangle" class="h-4 w-4 mr-1" />
+                  {translate_error(message)}
+                </span>
               </label>
-              <span class="text-base-content/60">or drag and drop</span>
-            </div>
-
-            <div class="flex flex-col gap-1">
-              <p class="text-sm text-base-content/60 font-medium">
-                JSON or CSV files up to 10MB
-              </p>
-              <p class="text-xs text-base-content/50">
-                Supported formats: .json, .csv
-              </p>
-            </div>
+            <% end %>
           </div>
-        </div>
 
-        <%= if message = @changeset.errors[:file] do %>
-          <label class="label">
-            <span class="label-text-alt text-error">
-              <.icon name="hero-exclamation-triangle" class="h-4 w-4 mr-1" />
-              <%= translate_error(message) %>
-            </span>
-          </label>
-        <% end %>
+          <div class="divider"></div>
+
+          <div class="flex flex-col sm:flex-row gap-3 justify-end">
+            <.link href={~p"/admin/import-export"} class="btn btn-ghost">
+              <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" /> Cancel
+            </.link>
+            <button type="submit" class="btn btn-success">
+              <.icon name="hero-eye" class="h-4 w-4 mr-2" /> Upload & Preview
+            </button>
+          </div>
+        </.form>
       </div>
+    </div>
 
-      <div class="divider"></div>
-
-      <div class="flex flex-col sm:flex-row gap-3 justify-end">
-        <.link href={~p"/admin/import-export"} class="btn btn-ghost">
-          <.icon name="hero-arrow-left" class="h-4 w-4 mr-2" />
-          Cancel
-        </.link>
-        <button type="submit" class="btn btn-success">
-          <.icon name="hero-eye" class="h-4 w-4 mr-2" />
-          Upload & Preview
-        </button>
-      </div>
-    </.form>
-  </div>
-</div>
-
-<div class="mt-8 border-t border-gray-200 pt-8">
-  <h3 class="text-lg font-medium text-gray-900">Import Requirements</h3>
-  <div class="mt-4">
-    <h4 class="text-sm font-medium text-gray-900">JSON Format</h4>
-    <p class="text-sm text-gray-600 mt-1">
-      Must contain an "items" array with book objects. Each book should have at minimum a "title" field.
-    </p>
-    <pre class="mt-2 text-xs bg-gray-100 p-3 rounded-md" phx-no-curly-interpolation>
+    <div class="mt-8 border-t border-gray-200 pt-8">
+      <h3 class="text-lg font-medium text-gray-900">Import Requirements</h3>
+      <div class="mt-4">
+        <h4 class="text-sm font-medium text-gray-900">JSON Format</h4>
+        <p class="text-sm text-gray-600 mt-1">
+          Must contain an "items" array with book objects. Each book should have at minimum a "title" field.
+        </p>
+        <pre class="mt-2 text-xs bg-gray-100 p-3 rounded-md" phx-no-curly-interpolation>
 {
   "items": [
     {
@@ -84,30 +103,29 @@
   ]
 }
     </pre>
-  </div>
+      </div>
 
-  <div class="mt-6">
-    <h4 class="text-sm font-medium text-gray-900">CSV Format</h4>
-    <p class="text-sm text-gray-600 mt-1">
-      Must include "title" and "author" columns at minimum. Additional columns will be imported if they match book fields.
-    </p>
-    <pre class="mt-2 text-xs bg-gray-100 p-3 rounded-md">
+      <div class="mt-6">
+        <h4 class="text-sm font-medium text-gray-900">CSV Format</h4>
+        <p class="text-sm text-gray-600 mt-1">
+          Must include "title" and "author" columns at minimum. Additional columns will be imported if they match book fields.
+        </p>
+        <pre class="mt-2 text-xs bg-gray-100 p-3 rounded-md">
 title,author,isbn13,media_type,genre
 "Book Title","Author Name","9781234567890","book","Fiction"
     </pre>
-  </div>
+      </div>
 
-  <div class="mt-6 text-sm text-gray-600">
-    <h4 class="text-sm font-medium text-gray-900 mb-2">Import Process</h4>
-    <ul class="list-disc list-inside space-y-1">
-      <li>Files are validated and you'll see a preview before importing</li>
-      <li>Duplicate books are detected by ISBN or title/author combination</li>
-      <li>You can choose how to handle duplicates during the preview step</li>
-      <li>Import progress is tracked and you can monitor the process</li>
-      <li>Failed imports can be retried after fixing any issues</li>
-    </ul>
-  </div>
-</div>
-
+      <div class="mt-6 text-sm text-gray-600">
+        <h4 class="text-sm font-medium text-gray-900 mb-2">Import Process</h4>
+        <ul class="list-disc list-inside space-y-1">
+          <li>Files are validated and you'll see a preview before importing</li>
+          <li>Duplicate books are detected by ISBN or title/author combination</li>
+          <li>You can choose how to handle duplicates during the preview step</li>
+          <li>Import progress is tracked and you can monitor the process</li>
+          <li>Failed imports can be retried after fixing any issues</li>
+        </ul>
+      </div>
+    </div>
   </.admin_layout>
 </Layouts.app>

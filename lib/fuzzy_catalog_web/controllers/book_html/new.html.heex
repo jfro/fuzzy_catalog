@@ -256,13 +256,34 @@
                         Published: {format_publication_date(book.publication_date)}
                       </p>
                     <% end %>
+                    <%= if book[:suggested_media_types] && length(book[:suggested_media_types]) > 0 do %>
+                      <p class="text-sm text-base-content/70 mt-1">
+                        Format:
+                        <span class="badge badge-info badge-sm">
+                          {List.first(book[:suggested_media_types])}
+                        </span>
+                      </p>
+                    <% end %>
                   </div>
-                  <.form :let={f} for={%{}} action={~p"/books/add-from-lookup"} method="post">
+                  <.form for={%{}} action={~p"/books/add-from-lookup"} method="post">
                     <input type="hidden" name="book[title]" value={book.title} />
                     <input type="hidden" name="book[author]" value={book.author} />
                     <input type="hidden" name="book[isbn10]" value={book.isbn10 || ""} />
                     <input type="hidden" name="book[isbn13]" value={book.isbn13 || ""} />
-                    <input type="hidden" name="book[cover_url]" value={safe_cover_url(book.cover_url)} />
+                    <input
+                      type="hidden"
+                      name="book[cover_url]"
+                      value={safe_cover_url(book.cover_url)}
+                    />
+                    <input
+                      type="hidden"
+                      name="book[suggested_media_types][]"
+                      value={
+                        if book[:suggested_media_types],
+                          do: Enum.join(book[:suggested_media_types], ","),
+                          else: ""
+                      }
+                    />
                     <.button type="submit" class="btn btn-xs btn-outline">Add to Library</.button>
                   </.form>
                 </div>
@@ -278,12 +299,33 @@
                 Published: {format_publication_date(@lookup_results.publication_date)}
               </p>
             <% end %>
-            <.form :let={f} for={%{}} action={~p"/books/add-from-lookup"} method="post" class="mt-2">
+            <%= if @lookup_results[:suggested_media_types] && length(@lookup_results[:suggested_media_types]) > 0 do %>
+              <p class="text-sm text-base-content/70 mt-1">
+                Format:
+                <span class="badge badge-info badge-sm">
+                  {List.first(@lookup_results[:suggested_media_types])}
+                </span>
+              </p>
+            <% end %>
+            <.form for={%{}} action={~p"/books/add-from-lookup"} method="post" class="mt-2">
               <input type="hidden" name="book[title]" value={@lookup_results.title} />
               <input type="hidden" name="book[author]" value={@lookup_results.author} />
               <input type="hidden" name="book[isbn10]" value={@lookup_results.isbn10 || ""} />
               <input type="hidden" name="book[isbn13]" value={@lookup_results.isbn13 || ""} />
-              <input type="hidden" name="book[cover_url]" value={safe_cover_url(@lookup_results.cover_url)} />
+              <input
+                type="hidden"
+                name="book[cover_url]"
+                value={safe_cover_url(@lookup_results.cover_url)}
+              />
+              <input
+                type="hidden"
+                name="book[suggested_media_types][]"
+                value={
+                  if @lookup_results[:suggested_media_types],
+                    do: Enum.join(@lookup_results[:suggested_media_types], ","),
+                    else: ""
+                }
+              />
               <.button type="submit" class="btn btn-sm btn-primary">Add to Library</.button>
             </.form>
           </div>

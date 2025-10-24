@@ -45,12 +45,18 @@
             <span class="label-text-alt text-xs">Applied to new books</span>
           </label>
           <select id="default-media-type" class="select select-bordered w-full">
+            <option value="automatic" selected>Automatic (from API)</option>
             <option value="unspecified">Unspecified</option>
-            <option value="hardcover" selected>Hardcover</option>
+            <option value="hardcover">Hardcover</option>
             <option value="paperback">Paperback</option>
             <option value="audiobook">Audiobook</option>
             <option value="ebook">eBook</option>
           </select>
+          <label class="label">
+            <span class="label-text-alt text-xs text-base-content/60">
+              "Automatic" uses API-detected format or "Unspecified" if not found
+            </span>
+          </label>
         </div>
         
 <!-- Control Buttons -->
