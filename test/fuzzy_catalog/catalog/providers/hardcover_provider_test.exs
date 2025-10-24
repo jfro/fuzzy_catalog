@@ -203,19 +203,23 @@ defmodule FuzzyCatalog.Catalog.Providers.HardcoverProviderTest do
       assert nil == HardcoverProvider.__format_series__([])
     end
 
-    test "extracts first series name from map" do
-      series = [%{"name" => "The Stormlight Archive"}]
+    test "extracts first series name from nested structure" do
+      series = [%{"series" => %{"name" => "The Stormlight Archive"}}]
       assert "The Stormlight Archive" == HardcoverProvider.__format_series__(series)
     end
 
     test "extracts first series name when multiple exist" do
-      series = [%{"name" => "The Stormlight Archive"}, %{"name" => "Another Series"}]
+      series = [
+        %{"series" => %{"name" => "The Stormlight Archive"}},
+        %{"series" => %{"name" => "Another Series"}}
+      ]
+
       assert "The Stormlight Archive" == HardcoverProvider.__format_series__(series)
     end
 
-    test "extracts first series name from string list" do
-      series = ["The Stormlight Archive", "Another Series"]
-      assert "The Stormlight Archive" == HardcoverProvider.__format_series__(series)
+    test "handles malformed series data gracefully" do
+      series = [%{"name" => "The Stormlight Archive"}]
+      assert nil == HardcoverProvider.__format_series__(series)
     end
 
     test "returns nil for unexpected format" do

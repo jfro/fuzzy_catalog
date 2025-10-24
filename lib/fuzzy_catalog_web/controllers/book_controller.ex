@@ -390,11 +390,14 @@ defmodule FuzzyCatalogWeb.BookController do
                 case Catalog.find_book_by_title_and_author(title, author) do
                   nil ->
                     # Step 4: Book doesn't exist, create it
-                    # Determine media type from suggested types or use the provided one
+                    # Determine media type based on user selection
                     determined_media_type =
-                      case determine_media_type(book_params) do
-                        "unspecified" -> media_type
-                        suggested_type -> suggested_type
+                      if media_type == "automatic" do
+                        # Use API-suggested media type, or "unspecified" if not available
+                        determine_media_type(book_params)
+                      else
+                        # Use the user's explicit selection
+                        media_type
                       end
 
                     final_params =
@@ -411,7 +414,7 @@ defmodule FuzzyCatalogWeb.BookController do
                             title: book.title,
                             author: book.author,
                             isbn: isbn,
-                            media_type: media_type
+                            media_type: determined_media_type
                           }
                         })
 
