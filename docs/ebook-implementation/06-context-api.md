@@ -20,32 +20,24 @@ Add these tests to the existing file:
 ```elixir
   describe "trigger_scan/1" do
     test "enqueues ScanWorker job" do
-      user = user_fixture()
-
       assert {:ok, job} = Ebooks.trigger_scan(
         directory: "/path/to/ebooks",
-        user_id: user.id,
         recursive: true
       )
 
       assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ScanWorker, args: %{
         "directory" => "/path/to/ebooks",
-        "user_id" => user.id,
         "recursive" => true
       }
     end
 
     test "defaults recursive to true" do
-      user = user_fixture()
-
       assert {:ok, job} = Ebooks.trigger_scan(
-        directory: "/path/to/ebooks",
-        user_id: user.id
+        directory: "/path/to/ebooks"
       )
 
       assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ScanWorker, args: %{
         "directory" => "/path/to/ebooks",
-        "user_id" => user.id,
         "recursive" => true
       }
     end
@@ -53,8 +45,7 @@ Add these tests to the existing file:
 
   describe "trigger_reprocess/1" do
     test "enqueues ProcessWorker job for ebook" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+      ebook = ebook_fixture()
 
       assert {:ok, job} = Ebooks.trigger_reprocess(ebook.id)
 
@@ -64,8 +55,7 @@ Add these tests to the existing file:
     end
 
     test "accepts enable_fuzzy_matching option" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+      ebook = ebook_fixture()
 
       assert {:ok, job} = Ebooks.trigger_reprocess(ebook.id, enable_fuzzy_matching: true)
 
@@ -76,15 +66,14 @@ Add these tests to the existing file:
     end
   end
 
-  describe "list_pending_ebooks/1" do
+  describe "list_pending_ebooks/0" do
     test "returns ebooks with pending processing status" do
-      user = user_fixture()
-      pending1 = ebook_fixture(user_id: user.id, processing_status: "pending")
-      pending2 = ebook_fixture(user_id: user.id, processing_status: "pending")
-      _completed = ebook_fixture(user_id: user.id, processing_status: "completed")
-      _failed = ebook_fixture(user_id: user.id, processing_status: "failed")
+      pending1 = ebook_fixture(processing_status: "pending")
+      pending2 = ebook_fixture(processing_status: "pending")
+      _completed = ebook_fixture(processing_status: "completed")
+      _failed = ebook_fixture(processing_status: "failed")
 
-      pending = Ebooks.list_pending_ebooks(user.id)
+      pending = Ebooks.list_pending_ebooks()
 
       assert length(pending) == 2
       assert Enum.all?(pending, &(&1.processing_status == "pending"))
@@ -94,21 +83,19 @@ Add these tests to the existing file:
     end
 
     test "returns empty list when no pending ebooks" do
-      user = user_fixture()
-      _completed = ebook_fixture(user_id: user.id, processing_status: "completed")
+      _completed = ebook_fixture(processing_status: "completed")
 
-      assert Ebooks.list_pending_ebooks(user.id) == []
+      assert Ebooks.list_pending_ebooks() == []
     end
   end
 
-  describe "list_failed_ebooks/1" do
+  describe "list_failed_ebooks/0" do
     test "returns ebooks with failed processing status" do
-      user = user_fixture()
-      failed1 = ebook_fixture(user_id: user.id, processing_status: "failed")
-      failed2 = ebook_fixture(user_id: user.id, processing_status: "failed")
-      _completed = ebook_fixture(user_id: user.id, processing_status: "completed")
+      failed1 = ebook_fixture(processing_status: "failed")
+      failed2 = ebook_fixture(processing_status: "failed")
+      _completed = ebook_fixture(processing_status: "completed")
 
-      failed = Ebooks.list_failed_ebooks(user.id)
+      failed = Ebooks.list_failed_ebooks()
 
       assert length(failed) == 2
       assert Enum.all?(failed, &(&1.processing_status == "failed"))
@@ -117,14 +104,13 @@ Add these tests to the existing file:
 
   describe "delete_ebook/1" do
     test "deletes the ebook" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+      ebook = ebook_fixture()
 
       assert {:ok, deleted} = Ebooks.delete_ebook(ebook)
       assert deleted.id == ebook.id
 
       assert_raise Ecto.NoResultsError, fn ->
-        Ebooks.get_ebook!(ebook.id, user.id)
+        Ebooks.get_ebook!(ebook.id)
       end
     end
   end
@@ -147,21 +133,19 @@ Add these functions to the existing module:
   ## Options
 
   - `:directory` - Required. Path to scan
-  - `:user_id` - Required. User who owns the ebooks
   - `:recursive` - Optional. Whether to scan subdirectories (default: true)
 
   ## Examples
 
-      iex> trigger_scan(directory: "/ebooks", user_id: 1)
+      iex> trigger_scan(directory: "/ebooks")
       {:ok, %Oban.Job{}}
 
-      iex> trigger_scan(directory: "/ebooks", user_id: 1, recursive: false)
+      iex> trigger_scan(directory: "/ebooks", recursive: false)
       {:ok, %Oban.Job{}}
   """
   def trigger_scan(opts) do
     %{
       directory: Keyword.fetch!(opts, :directory),
-      user_id: Keyword.fetch!(opts, :user_id),
       recursive: Keyword.get(opts, :recursive, true)
     }
     |> ScanWorker.new()
@@ -197,32 +181,30 @@ Add these functions to the existing module:
   end
 
   @doc """
-  Lists ebooks with pending processing status for a user.
+  Lists ebooks with pending processing status.
 
   ## Examples
 
-      iex> list_pending_ebooks(123)
+      iex> list_pending_ebooks()
       [%Ebook{}, ...]
   """
-  def list_pending_ebooks(user_id) do
+  def list_pending_ebooks do
     Ebook
-    |> where([e], e.user_id == ^user_id)
     |> where([e], e.processing_status == "pending")
     |> order_by([e], asc: e.inserted_at)
     |> Repo.all()
   end
 
   @doc """
-  Lists ebooks with failed processing status for a user.
+  Lists ebooks with failed processing status.
 
   ## Examples
 
-      iex> list_failed_ebooks(123)
+      iex> list_failed_ebooks()
       [%Ebook{}, ...]
   """
-  def list_failed_ebooks(user_id) do
+  def list_failed_ebooks do
     Ebook
-    |> where([e], e.user_id == ^user_id)
     |> where([e], e.processing_status == "failed")
     |> order_by([e], desc: e.last_processed_at)
     |> Repo.all()
@@ -276,11 +258,8 @@ All tests should pass ✅
 
 ```elixir
 # From a controller or LiveView
-user = get_current_user(conn)
-
 {:ok, job} = FuzzyCatalog.Ebooks.trigger_scan(
   directory: "/mnt/storage/ebooks",
-  user_id: user.id,
   recursive: true
 )
 ```
@@ -289,7 +268,7 @@ user = get_current_user(conn)
 
 ```elixir
 # Get all failed ebooks
-failed_ebooks = FuzzyCatalog.Ebooks.list_failed_ebooks(user.id)
+failed_ebooks = FuzzyCatalog.Ebooks.list_failed_ebooks()
 
 # Reprocess each with fuzzy matching enabled
 Enum.each(failed_ebooks, fn ebook ->
@@ -301,10 +280,10 @@ end)
 
 ```elixir
 # Get pending count
-pending_count = FuzzyCatalog.Ebooks.list_pending_ebooks(user.id) |> length()
+pending_count = FuzzyCatalog.Ebooks.list_pending_ebooks() |> length()
 
 # Get failed count
-failed_count = FuzzyCatalog.Ebooks.list_failed_ebooks(user.id) |> length()
+failed_count = FuzzyCatalog.Ebooks.list_failed_ebooks() |> length()
 
 # Display in UI
 assigns = %{

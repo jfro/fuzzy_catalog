@@ -7,9 +7,8 @@ Create the core data model for ebook file management with comprehensive test cov
 The Ebook schema represents a physical ebook file on disk. It's an independent entity that optionally links to Books (metadata) but can exist standalone.
 
 **Key Design Decisions:**
-- Ebooks belong to users (user_id required)
 - Ebooks optionally link to books (book_id optional)
-- File path is unique per user
+- File path is unique globally
 - Processing status tracks workflow state
 
 ## Step 2.1: Write Ebook Schema Tests
@@ -27,13 +26,11 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
 
   describe "changeset/2" do
     test "valid changeset with all required fields" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
         file_size: 1024000,
-        file_hash: "abc123def456",
-        user_id: user.id
+        file_hash: "abc123def456"
       }
 
       changeset = Ebook.changeset(%Ebook{}, attrs)
@@ -41,32 +38,22 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "requires file_path" do
-      user = user_fixture()
-      attrs = %{file_format: "epub", file_size: 1024, user_id: user.id}
+      attrs = %{file_format: "epub", file_size: 1024}
       changeset = Ebook.changeset(%Ebook{}, attrs)
       assert %{file_path: ["can't be blank"]} = errors_on(changeset)
     end
 
     test "requires file_format" do
-      user = user_fixture()
-      attrs = %{file_path: "/path/to/book.epub", file_size: 1024, user_id: user.id}
+      attrs = %{file_path: "/path/to/book.epub", file_size: 1024}
       changeset = Ebook.changeset(%Ebook{}, attrs)
       assert %{file_format: ["can't be blank"]} = errors_on(changeset)
     end
 
-    test "requires user_id" do
-      attrs = %{file_path: "/path/to/book.epub", file_format: "epub", file_size: 1024}
-      changeset = Ebook.changeset(%Ebook{}, attrs)
-      assert %{user_id: ["can't be blank"]} = errors_on(changeset)
-    end
-
     test "validates file_format is in allowed list" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.txt",
         file_format: "txt",
-        file_size: 1024,
-        user_id: user.id
+        file_size: 1024
       }
 
       changeset = Ebook.changeset(%Ebook{}, attrs)
@@ -74,12 +61,10 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "validates file_size is positive" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
-        file_size: -100,
-        user_id: user.id
+        file_size: -100
       }
 
       changeset = Ebook.changeset(%Ebook{}, attrs)
@@ -87,14 +72,12 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "accepts optional book_id for linking to existing book" do
-      user = user_fixture()
       book = book_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
         file_size: 1024,
-        book_id: book.id,
-        user_id: user.id
+        book_id: book.id
       }
 
       changeset = Ebook.changeset(%Ebook{}, attrs)
@@ -103,12 +86,10 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "accepts extracted metadata fields" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
         file_size: 1024,
-        user_id: user.id,
         extracted_title: "The Great Gatsby",
         extracted_author: "F. Scott Fitzgerald",
         extracted_isbn: "9780743273565",
@@ -120,12 +101,10 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "accepts processing status fields" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
         file_size: 1024,
-        user_id: user.id,
         processing_status: "completed",
         last_processed_at: DateTime.utc_now()
       }
@@ -135,12 +114,10 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "validates processing_status is in allowed list" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
         file_size: 1024,
-        user_id: user.id,
         processing_status: "invalid_status"
       }
 
@@ -151,8 +128,7 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
 
   describe "associations" do
     test "belongs_to book (optional)" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+      ebook = ebook_fixture()
       assert %Ecto.Association.NotLoaded{} = ebook.book
 
       ebook_with_book = ebook |> Repo.preload(:book)
@@ -160,20 +136,11 @@ defmodule FuzzyCatalog.Ebooks.EbookTest do
     end
 
     test "can link to existing book" do
-      user = user_fixture()
       book = book_fixture()
-      ebook = ebook_fixture(user_id: user.id, book_id: book.id)
+      ebook = ebook_fixture(book_id: book.id)
       ebook_with_book = ebook |> Repo.preload(:book)
 
       assert ebook_with_book.book.id == book.id
-    end
-
-    test "belongs_to user (required)" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
-      ebook_with_user = ebook |> Repo.preload(:user)
-
-      assert ebook_with_user.user.id == user.id
     end
   end
 end
@@ -220,9 +187,6 @@ defmodule FuzzyCatalog.Ebooks.Ebook do
     # Optional relationship to Book
     belongs_to :book, FuzzyCatalog.Catalog.Book
 
-    # User ownership (ebooks belong to users)
-    belongs_to :user, FuzzyCatalog.Accounts.User
-
     timestamps()
   end
 
@@ -245,16 +209,14 @@ defmodule FuzzyCatalog.Ebooks.Ebook do
       :processing_error,
       :last_processed_at,
       :cover_thumbnail_key,
-      :book_id,
-      :user_id
+      :book_id
     ])
-    |> validate_required([:file_path, :file_format, :user_id])
+    |> validate_required([:file_path, :file_format])
     |> validate_inclusion(:file_format, @file_formats)
     |> validate_inclusion(:processing_status, @processing_statuses)
     |> validate_number(:file_size, greater_than: 0)
     |> foreign_key_constraint(:book_id)
-    |> foreign_key_constraint(:user_id)
-    |> unique_constraint([:file_path, :user_id])
+    |> unique_constraint(:file_path)
   end
 
   def file_formats, do: @file_formats
@@ -307,16 +269,14 @@ defmodule FuzzyCatalog.Repo.Migrations.CreateEbooks do
 
       # Relationships
       add :book_id, references(:books, on_delete: :nilify_all)
-      add :user_id, references(:users, on_delete: :delete_all), null: false
 
       timestamps()
     end
 
-    create index(:ebooks, [:user_id])
     create index(:ebooks, [:book_id])
     create index(:ebooks, [:file_hash])
     create index(:ebooks, [:processing_status])
-    create unique_index(:ebooks, [:file_path, :user_id])
+    create unique_index(:ebooks, [:file_path])
   end
 end
 ```
@@ -339,17 +299,13 @@ defmodule FuzzyCatalog.EbooksTest do
 
   alias FuzzyCatalog.Ebooks
   import FuzzyCatalog.EbooksFixtures
-  import FuzzyCatalog.AccountsFixtures
 
-  describe "list_ebooks/1" do
-    test "returns all ebooks for a user" do
-      user = user_fixture()
-      ebook1 = ebook_fixture(user_id: user.id)
-      ebook2 = ebook_fixture(user_id: user.id)
-      other_user = user_fixture()
-      _other_user_ebook = ebook_fixture(user_id: other_user.id)
+  describe "list_ebooks/0" do
+    test "returns all ebooks" do
+      ebook1 = ebook_fixture()
+      ebook2 = ebook_fixture()
 
-      ebooks = Ebooks.list_ebooks(user.id)
+      ebooks = Ebooks.list_ebooks()
 
       assert length(ebooks) == 2
       assert Enum.any?(ebooks, &(&1.id == ebook1.id))
@@ -357,38 +313,30 @@ defmodule FuzzyCatalog.EbooksTest do
     end
   end
 
-  describe "get_ebook!/2" do
-    test "returns the ebook with given id for user" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+  describe "get_ebook!/1" do
+    test "returns the ebook with given id" do
+      ebook = ebook_fixture()
 
-      assert Ebooks.get_ebook!(ebook.id, user.id).id == ebook.id
+      assert Ebooks.get_ebook!(ebook.id).id == ebook.id
     end
 
-    test "raises if ebook doesn't belong to user" do
-      user = user_fixture()
-      other_user = user_fixture()
-      ebook = ebook_fixture(user_id: other_user.id)
-
+    test "raises if ebook doesn't exist" do
       assert_raise Ecto.NoResultsError, fn ->
-        Ebooks.get_ebook!(ebook.id, user.id)
+        Ebooks.get_ebook!(999_999)
       end
     end
   end
 
   describe "create_ebook/1" do
     test "creates ebook with valid data" do
-      user = user_fixture()
       attrs = %{
         file_path: "/path/to/book.epub",
         file_format: "epub",
-        file_size: 1024000,
-        user_id: user.id
+        file_size: 1024000
       }
 
       assert {:ok, ebook} = Ebooks.create_ebook(attrs)
       assert ebook.file_path == "/path/to/book.epub"
-      assert ebook.user_id == user.id
     end
 
     test "returns error with invalid data" do
@@ -399,8 +347,7 @@ defmodule FuzzyCatalog.EbooksTest do
 
   describe "update_ebook/2" do
     test "updates ebook with valid data" do
-      user = user_fixture()
-      ebook = ebook_fixture(user_id: user.id)
+      ebook = ebook_fixture()
 
       assert {:ok, updated} = Ebooks.update_ebook(ebook, %{
         extracted_title: "New Title",
@@ -412,21 +359,16 @@ defmodule FuzzyCatalog.EbooksTest do
     end
   end
 
-  describe "get_ebook_by_path/2" do
-    test "returns ebook by file path for user" do
-      user = user_fixture()
-      ebook = ebook_fixture(
-        user_id: user.id,
-        file_path: "/unique/path/book.epub"
-      )
+  describe "get_ebook_by_path/1" do
+    test "returns ebook by file path" do
+      ebook = ebook_fixture(file_path: "/unique/path/book.epub")
 
-      assert found = Ebooks.get_ebook_by_path("/unique/path/book.epub", user.id)
+      assert found = Ebooks.get_ebook_by_path("/unique/path/book.epub")
       assert found.id == ebook.id
     end
 
     test "returns nil if path doesn't exist" do
-      user = user_fixture()
-      assert is_nil(Ebooks.get_ebook_by_path("/nonexistent.epub", user.id))
+      assert is_nil(Ebooks.get_ebook_by_path("/nonexistent.epub"))
     end
   end
 end
@@ -449,23 +391,20 @@ defmodule FuzzyCatalog.Ebooks do
   alias FuzzyCatalog.Ebooks.Ebook
 
   @doc """
-  Returns the list of ebooks for a user.
+  Returns the list of ebooks.
   """
-  def list_ebooks(user_id) do
+  def list_ebooks do
     Ebook
-    |> where([e], e.user_id == ^user_id)
     |> order_by([e], desc: e.inserted_at)
     |> Repo.all()
   end
 
   @doc """
-  Gets a single ebook for a user.
-  Raises `Ecto.NoResultsError` if the Ebook does not exist or doesn't belong to user.
+  Gets a single ebook.
+  Raises `Ecto.NoResultsError` if the Ebook does not exist.
   """
-  def get_ebook!(id, user_id) do
-    Ebook
-    |> where([e], e.id == ^id and e.user_id == ^user_id)
-    |> Repo.one!()
+  def get_ebook!(id) do
+    Repo.get!(Ebook, id)
   end
 
   @doc """
@@ -487,11 +426,11 @@ defmodule FuzzyCatalog.Ebooks do
   end
 
   @doc """
-  Gets an ebook by file path for a user.
+  Gets an ebook by file path.
   """
-  def get_ebook_by_path(file_path, user_id) do
+  def get_ebook_by_path(file_path) do
     Ebook
-    |> where([e], e.file_path == ^file_path and e.user_id == ^user_id)
+    |> where([e], e.file_path == ^file_path)
     |> Repo.one()
   end
 end
@@ -509,7 +448,6 @@ defmodule FuzzyCatalog.EbooksFixtures do
   Test helpers for creating ebook entities.
   """
 
-  import FuzzyCatalog.AccountsFixtures
   alias FuzzyCatalog.Ebooks
   alias FuzzyCatalog.Catalog
 
@@ -518,16 +456,11 @@ defmodule FuzzyCatalog.EbooksFixtures do
   end
 
   def valid_ebook_attributes(attrs \\ %{}) do
-    user_id = Map.get_lazy(attrs, :user_id, fn ->
-      user_fixture().id
-    end)
-
     Enum.into(attrs, %{
       file_path: unique_file_path(),
       file_format: "epub",
       file_size: 1024000,
-      file_hash: "abc123def456",
-      user_id: user_id
+      file_hash: "abc123def456"
     })
   end
 
