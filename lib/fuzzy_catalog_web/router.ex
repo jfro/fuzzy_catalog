@@ -2,6 +2,7 @@ defmodule FuzzyCatalogWeb.Router do
   use FuzzyCatalogWeb, :router
 
   import FuzzyCatalogWeb.UserAuth
+  import FuzzyCatalogWeb.UserAdminAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -77,11 +78,15 @@ defmodule FuzzyCatalogWeb.Router do
   end
 
   scope "/admin", FuzzyCatalogWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [:browser, :require_authenticated_user, :require_admin]
 
     live "/", AdminLive, :index
     live "/users", AdminUsersLive, :index
     live "/settings", AdminSettingsLive, :index
+
+    # Oban Web Dashboard
+    import Oban.Web.Router
+    oban_dashboard("/oban")
 
     # Import/Export routes
     get "/import-export", ImportExportController, :index

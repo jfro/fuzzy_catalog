@@ -72,7 +72,9 @@ defmodule FuzzyCatalog.MixProject do
       {:bandit, "~> 1.5"},
       {:flop, "~> 0.26.0"},
       {:flop_phoenix, "~> 0.25.3"},
-      {:assent, "~> 0.3.1"}
+      {:assent, "~> 0.3.1"},
+      {:oban, "~> 2.18"},
+      {:oban_web, "~> 2.10"}
     ]
   end
 

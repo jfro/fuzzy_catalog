@@ -10,6 +10,7 @@ defmodule FuzzyCatalog.Application do
     children = [
       FuzzyCatalogWeb.Telemetry,
       FuzzyCatalog.Repo,
+      {Oban, Application.fetch_env!(:fuzzy_catalog, Oban)},
       {DNSCluster, query: Application.get_env(:fuzzy_catalog, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: FuzzyCatalog.PubSub},
       FuzzyCatalog.SyncStatusManager,

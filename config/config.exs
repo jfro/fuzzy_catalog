@@ -97,6 +97,27 @@ config :phoenix, :json_library, Jason
 # Configure Flop
 config :flop, repo: FuzzyCatalog.Repo
 
+# Oban configuration for background job processing
+config :fuzzy_catalog, Oban,
+  repo: FuzzyCatalog.Repo,
+  queues: [
+    # One concurrent scan job at a time
+    ebook_scan: 1,
+    # Up to 10 files can be processed concurrently
+    ebook_process: 10
+  ],
+  plugins: [
+    # Keep jobs for 7 days
+    {Oban.Plugins.Pruner, max_age: 86400 * 7},
+    # No cron jobs initially
+    {Oban.Plugins.Cron, crontab: []}
+  ]
+
+# Oban Web configuration for the dashboard
+config :fuzzy_catalog, Oban.Web.Resolver, pubsub: FuzzyCatalog.PubSub
+
+config :oban, :notifier, pubsub: FuzzyCatalog.PubSub
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
