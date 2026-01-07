@@ -22,7 +22,9 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorker do
 
   @impl Oban.Worker
   def perform(%Oban.Job{args: %{"ebook_id" => ebook_id} = args}) do
-    enable_fuzzy = Map.get(args, "enable_fuzzy_matching", false)
+    # Get fuzzy matching setting from args, or fall back to config
+    default_fuzzy = Application.get_env(:fuzzy_catalog, :ebooks)[:enable_fuzzy_matching]
+    enable_fuzzy = Map.get(args, "enable_fuzzy_matching", default_fuzzy)
 
     Logger.info("Processing ebook #{ebook_id}")
 

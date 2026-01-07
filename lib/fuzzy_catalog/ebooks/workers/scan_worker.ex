@@ -58,11 +58,16 @@ defmodule FuzzyCatalog.Ebooks.Workers.ScanWorker do
   end
 
   defp discover_files(directory, recursive) do
+    # Get supported formats from config
+    supported_formats =
+      Application.get_env(:fuzzy_catalog, :ebooks)[:supported_formats]
+      |> Enum.join(",")
+
     pattern =
       if recursive do
-        Path.join([directory, "**", "*.{epub,pdf}"])
+        Path.join([directory, "**", "*.{#{supported_formats}}"])
       else
-        Path.join([directory, "*.{epub,pdf}"])
+        Path.join([directory, "*.{#{supported_formats}}"])
       end
 
     files = Path.wildcard(pattern, match_dot: false)
@@ -101,28 +106,38 @@ defmodule FuzzyCatalog.Ebooks.Workers.ScanWorker do
 
   defp create_ebook_record(file_path) do
     file_stat = File.stat!(file_path)
+    max_file_size = Application.get_env(:fuzzy_catalog, :ebooks)[:max_file_size]
 
-    attrs = %{
-      file_path: file_path,
-      file_format: determine_format(file_path),
-      file_size: file_stat.size,
-      file_hash: calculate_file_hash(file_path),
-      last_modified_at:
-        file_stat.mtime |> NaiveDateTime.from_erl!() |> DateTime.from_naive!("Etc/UTC"),
-      processing_status: "pending"
-    }
+    # Validate file size
+    if file_stat.size > max_file_size do
+      Logger.warning(
+        "Skipping #{file_path}: file too large (#{file_stat.size} bytes, max: #{max_file_size})"
+      )
 
-    case Ebooks.create_ebook(attrs) do
-      {:ok, ebook} ->
-        # Enqueue processing job
-        %{"ebook_id" => ebook.id}
-        |> ProcessWorker.new()
-        |> Oban.insert()
+      {:error, :file_too_large}
+    else
+      attrs = %{
+        file_path: file_path,
+        file_format: determine_format(file_path),
+        file_size: file_stat.size,
+        file_hash: calculate_file_hash(file_path),
+        last_modified_at:
+          file_stat.mtime |> NaiveDateTime.from_erl!() |> DateTime.from_naive!("Etc/UTC"),
+        processing_status: "pending"
+      }
 
-        {:ok, :new}
+      case Ebooks.create_ebook(attrs) do
+        {:ok, ebook} ->
+          # Enqueue processing job
+          %{"ebook_id" => ebook.id}
+          |> ProcessWorker.new()
+          |> Oban.insert()
 
-      {:error, reason} ->
-        {:error, reason}
+          {:ok, :new}
+
+        {:error, reason} ->
+          {:error, reason}
+      end
     end
   end
 

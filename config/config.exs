@@ -118,6 +118,17 @@ config :fuzzy_catalog, Oban.Web.Resolver, pubsub: FuzzyCatalog.PubSub
 
 config :oban, :notifier, pubsub: FuzzyCatalog.PubSub
 
+# Ebook management configuration
+config :fuzzy_catalog, :ebooks,
+  # Supported file formats for ebook scanning
+  supported_formats: ["epub", "pdf"],
+  # Maximum file size in bytes (100MB default)
+  max_file_size: 100 * 1024 * 1024,
+  # Enable fuzzy matching for book linking by default
+  enable_fuzzy_matching: true,
+  # Fuzzy matching threshold (0.0 - 1.0) - higher means stricter matching
+  fuzzy_threshold: 0.85
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

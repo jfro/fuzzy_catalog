@@ -141,6 +141,51 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorkerTest do
     end
   end
 
+  describe "configuration" do
+    @tag :tmp_dir
+    test "uses enable_fuzzy_matching config by default", %{tmp_dir: tmp_dir} do
+      # Verify config value exists and is accessible
+      config = Application.get_env(:fuzzy_catalog, :ebooks)
+      enable_fuzzy = config[:enable_fuzzy_matching]
+
+      assert is_boolean(enable_fuzzy)
+
+      # Create ebook with metadata but no ISBN
+      epub_path = Path.join(tmp_dir, "fuzzy_test.epub")
+
+      create_test_epub(epub_path, %{
+        title: "Some Title",
+        creator: "Some Author"
+      })
+
+      file_hash =
+        File.read!(epub_path)
+        |> then(&:crypto.hash(:sha256, &1))
+        |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: epub_path, file_hash: file_hash)
+
+      # Process without explicit enable_fuzzy_matching argument
+      # Worker should use config value
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      assert updated.processing_status == "completed"
+    end
+
+    test "fuzzy_threshold configuration is valid" do
+      config = Application.get_env(:fuzzy_catalog, :ebooks)
+      threshold = config[:fuzzy_threshold]
+
+      assert is_float(threshold)
+      assert threshold >= 0.0
+      assert threshold <= 1.0
+    end
+  end
+
   # Test helper functions (from MetadataExtractorTest)
   defp create_test_epub(path, metadata) do
     # Create a minimal valid EPUB structure

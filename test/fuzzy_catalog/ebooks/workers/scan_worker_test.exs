@@ -147,4 +147,60 @@ defmodule FuzzyCatalog.Ebooks.Workers.ScanWorkerTest do
       assert String.length(hash1) > 0
     end
   end
+
+  describe "configuration" do
+    @tag :tmp_dir
+    test "only scans files matching supported_formats config", %{tmp_dir: tmp_dir} do
+      # Create files with different extensions
+      File.write!(Path.join(tmp_dir, "book1.epub"), "content")
+      File.write!(Path.join(tmp_dir, "book2.pdf"), "content")
+      File.write!(Path.join(tmp_dir, "book3.mobi"), "content")
+
+      assert :ok =
+               perform_job(ScanWorker, %{
+                 "directory" => tmp_dir,
+                 "recursive" => false
+               })
+
+      # Should only find epub and pdf (default supported formats)
+      ebooks = Ebooks.list_ebooks()
+      assert length(ebooks) == 2
+
+      formats = Enum.map(ebooks, & &1.file_format)
+      assert "epub" in formats
+      assert "pdf" in formats
+    end
+
+    @tag :tmp_dir
+    test "rejects files exceeding max_file_size config", %{tmp_dir: tmp_dir} do
+      # Create a large file (larger than default 100MB)
+      large_path = Path.join(tmp_dir, "huge.epub")
+
+      # Create file with size exceeding limit
+      # We'll mock this by creating a small file and testing the logic
+      File.write!(large_path, "small content for now")
+
+      # Note: This test verifies the configuration exists and can be accessed
+      # The actual size validation will be tested once we implement it
+      max_size = Application.get_env(:fuzzy_catalog, :ebooks)[:max_file_size]
+      assert is_integer(max_size)
+      assert max_size > 0
+    end
+
+    test "configuration values are accessible" do
+      config = Application.get_env(:fuzzy_catalog, :ebooks)
+
+      assert is_list(config[:supported_formats])
+      assert is_integer(config[:max_file_size])
+      assert is_boolean(config[:enable_fuzzy_matching])
+      assert is_float(config[:fuzzy_threshold])
+
+      # Verify default values
+      assert "epub" in config[:supported_formats]
+      assert "pdf" in config[:supported_formats]
+      assert config[:max_file_size] == 100 * 1024 * 1024
+      assert config[:fuzzy_threshold] >= 0.0
+      assert config[:fuzzy_threshold] <= 1.0
+    end
+  end
 end

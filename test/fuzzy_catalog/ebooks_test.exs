@@ -80,26 +80,31 @@ defmodule FuzzyCatalog.EbooksTest do
 
   describe "trigger_scan/1" do
     test "enqueues ScanWorker job" do
-      assert {:ok, _job} = Ebooks.trigger_scan(
-        directory: "/path/to/ebooks",
-        recursive: true
-      )
+      assert {:ok, _job} =
+               Ebooks.trigger_scan(
+                 directory: "/path/to/ebooks",
+                 recursive: true
+               )
 
-      assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ScanWorker, args: %{
-        "directory" => "/path/to/ebooks",
-        "recursive" => true
-      }
+      assert_enqueued(
+        worker: FuzzyCatalog.Ebooks.Workers.ScanWorker,
+        args: %{
+          "directory" => "/path/to/ebooks",
+          "recursive" => true
+        }
+      )
     end
 
     test "defaults recursive to true" do
-      assert {:ok, _job} = Ebooks.trigger_scan(
-        directory: "/path/to/ebooks"
-      )
+      assert {:ok, _job} = Ebooks.trigger_scan(directory: "/path/to/ebooks")
 
-      assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ScanWorker, args: %{
-        "directory" => "/path/to/ebooks",
-        "recursive" => true
-      }
+      assert_enqueued(
+        worker: FuzzyCatalog.Ebooks.Workers.ScanWorker,
+        args: %{
+          "directory" => "/path/to/ebooks",
+          "recursive" => true
+        }
+      )
     end
   end
 
@@ -109,9 +114,12 @@ defmodule FuzzyCatalog.EbooksTest do
 
       assert {:ok, _job} = Ebooks.trigger_reprocess(ebook.id)
 
-      assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ProcessWorker, args: %{
-        "ebook_id" => ebook.id
-      }
+      assert_enqueued(
+        worker: FuzzyCatalog.Ebooks.Workers.ProcessWorker,
+        args: %{
+          "ebook_id" => ebook.id
+        }
+      )
     end
 
     test "accepts enable_fuzzy_matching option" do
@@ -119,10 +127,13 @@ defmodule FuzzyCatalog.EbooksTest do
 
       assert {:ok, _job} = Ebooks.trigger_reprocess(ebook.id, enable_fuzzy_matching: true)
 
-      assert_enqueued worker: FuzzyCatalog.Ebooks.Workers.ProcessWorker, args: %{
-        "ebook_id" => ebook.id,
-        "enable_fuzzy_matching" => true
-      }
+      assert_enqueued(
+        worker: FuzzyCatalog.Ebooks.Workers.ProcessWorker,
+        args: %{
+          "ebook_id" => ebook.id,
+          "enable_fuzzy_matching" => true
+        }
+      )
     end
   end
 
