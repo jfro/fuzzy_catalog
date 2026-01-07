@@ -11,7 +11,16 @@ defmodule FuzzyCatalog.MixProject do
       aliases: aliases(),
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
-      listeners: [Phoenix.CodeReloader]
+      listeners: [Phoenix.CodeReloader],
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.post": :test,
+        "coveralls.html": :test,
+        "coveralls.json": :test,
+        precommit: :test
+      ]
     ]
   end
 
@@ -22,12 +31,6 @@ defmodule FuzzyCatalog.MixProject do
     [
       mod: {FuzzyCatalog.Application, []},
       extra_applications: [:logger, :runtime_tools]
-    ]
-  end
-
-  def cli do
-    [
-      preferred_envs: [precommit: :test]
     ]
   end
 
@@ -76,7 +79,8 @@ defmodule FuzzyCatalog.MixProject do
       {:oban, "~> 2.18"},
       {:oban_web, "~> 2.10"},
       {:bupe, "~> 0.6.3"},
-      {:pdf_info, "~> 0.1.17"}
+      {:pdf_info, "~> 0.1.17"},
+      {:excoveralls, "~> 0.18", only: :test}
     ]
   end
 
