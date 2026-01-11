@@ -1,0 +1,86 @@
+<.admin_layout
+  current_page="ebooks"
+  title="Problem Ebooks"
+  subtitle="Ebooks that failed during processing"
+>
+  <%= if Enum.empty?(@failed_ebooks) do %>
+    <div class="mt-8 text-center">
+      <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-success/10 mb-4">
+        <.icon name="hero-check-circle" class="h-8 w-8 text-success" />
+      </div>
+      <h3 class="text-lg font-medium text-base-content">No Failed Ebooks</h3>
+      <p class="mt-2 text-sm text-base-content/60">
+        All ebooks have been processed successfully or are pending processing.
+      </p>
+    </div>
+  <% else %>
+    <div class="mt-8 space-y-4">
+      <%= for ebook <- @failed_ebooks do %>
+        <div class="card bg-base-100 border border-base-300 shadow-sm">
+          <div class="card-body p-4">
+            <!-- Header row with ID and actions -->
+            <div class="flex items-start justify-between gap-4 mb-3">
+              <div class="flex items-center gap-3">
+                <span class="font-mono text-sm font-bold text-base-content/70">
+                  #{ebook.id}
+                </span>
+                <span class="badge badge-ghost badge-sm uppercase">
+                  {ebook.file_format}
+                </span>
+                <span class="text-xs text-base-content/60">
+                  {format_file_size(ebook.file_size)}
+                </span>
+              </div>
+              <div class="flex gap-2">
+                <button
+                  phx-click="retry_processing"
+                  phx-value-id={ebook.id}
+                  class="btn btn-sm btn-primary"
+                  title="Retry processing this ebook"
+                >
+                  <.icon name="hero-arrow-path" class="h-4 w-4" /> Retry
+                </button>
+                <button
+                  phx-click="delete_ebook"
+                  phx-value-id={ebook.id}
+                  data-confirm="Delete this ebook record? This will not delete the file."
+                  class="btn btn-sm btn-error btn-outline"
+                  title="Delete this ebook record"
+                >
+                  <.icon name="hero-trash" class="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            <!-- File path row -->
+            <div class="mb-3">
+              <div class="text-xs text-base-content/50 mb-1">File Path</div>
+              <div class="font-mono text-sm text-base-content break-all bg-base-200 px-3 py-2 rounded">
+                {ebook.file_path}
+              </div>
+            </div>
+            <!-- Error row -->
+            <div class="mb-3">
+              <div class="text-xs text-base-content/50 mb-1">Error</div>
+              <div class="text-sm text-error bg-error/5 border border-error/20 px-3 py-2 rounded break-words">
+                {ebook.processing_error}
+              </div>
+            </div>
+            <!-- Footer with timestamp -->
+            <div class="text-xs text-base-content/60">
+              Last processed:
+              <%= if ebook.last_processed_at do %>
+                {Calendar.strftime(ebook.last_processed_at, "%Y-%m-%d %H:%M")}
+              <% else %>
+                Never
+              <% end %>
+            </div>
+          </div>
+        </div>
+      <% end %>
+
+      <div class="mt-6 text-sm text-base-content/60">
+        Total failed ebooks: {length(@failed_ebooks)}
+      </div>
+    </div>
+  <% end %>
+</.admin_layout>

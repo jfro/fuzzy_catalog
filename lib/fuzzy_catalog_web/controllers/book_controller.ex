@@ -7,6 +7,7 @@ defmodule FuzzyCatalogWeb.BookController do
   alias FuzzyCatalog.Catalog.Book
   alias FuzzyCatalog.Catalog.BookLookup
   alias FuzzyCatalog.Collections
+  alias FuzzyCatalog.Ebooks
   alias FuzzyCatalog.Storage
 
   def index(conn, params) do
@@ -28,6 +29,7 @@ defmodule FuzzyCatalogWeb.BookController do
     book = Catalog.get_book!(id)
     media_types = Collections.get_book_media_types(book)
     external_data = Collections.get_book_external_data(book)
+    ebooks = Ebooks.list_ebooks_for_book(book)
 
     current_user =
       case conn.assigns[:current_scope] do
@@ -39,6 +41,7 @@ defmodule FuzzyCatalogWeb.BookController do
       book: book,
       media_types: media_types,
       external_data: external_data,
+      ebooks: ebooks,
       current_user: current_user
     )
   end
@@ -316,12 +319,12 @@ defmodule FuzzyCatalogWeb.BookController do
     case Collections.remove_from_collection(book, media_type) do
       {:ok, _collection} ->
         conn
-        |> put_flash(:info, "#{String.capitalize(media_type)} removed from library.")
+        |> put_flash(:info, "#{String.capitalize(media_type)} media type removed.")
         |> redirect(to: ~p"/books/#{book}")
 
       {:error, :not_found} ->
         conn
-        |> put_flash(:error, "This media type is not in the library.")
+        |> put_flash(:error, "Media type not found.")
         |> redirect(to: ~p"/books/#{book}")
     end
   end

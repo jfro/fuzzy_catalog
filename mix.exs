@@ -78,8 +78,9 @@ defmodule FuzzyCatalog.MixProject do
       {:assent, "~> 0.3.1"},
       {:oban, "~> 2.18"},
       {:oban_web, "~> 2.10"},
-      {:bupe, "~> 0.6.3"},
-      {:pdf_info, "~> 0.1.17"},
+      {:saxy, "~> 1.5"},
+      {:file_system, "~> 1.0"},
+      {:zstream, "~> 0.6"},
       {:excoveralls, "~> 0.18", only: :test}
     ]
   end

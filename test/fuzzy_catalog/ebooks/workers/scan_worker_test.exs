@@ -6,7 +6,9 @@ defmodule FuzzyCatalog.Ebooks.Workers.ScanWorkerTest do
 
   alias FuzzyCatalog.Ebooks.Workers.{ScanWorker, ProcessWorker}
   alias FuzzyCatalog.Ebooks
+  alias FuzzyCatalog.Ebooks.Libraries
   import FuzzyCatalog.EbooksFixtures
+  import FuzzyCatalog.LibrariesFixtures
 
   describe "perform/1" do
     @tag :tmp_dir
@@ -201,6 +203,63 @@ defmodule FuzzyCatalog.Ebooks.Workers.ScanWorkerTest do
       assert config[:max_file_size] == 100 * 1024 * 1024
       assert config[:fuzzy_threshold] >= 0.0
       assert config[:fuzzy_threshold] <= 1.0
+    end
+  end
+
+  describe "library integration" do
+    @tag :tmp_dir
+    test "updates library status to idle on successful scan", %{tmp_dir: tmp_dir} do
+      library = library_fixture(%{path: tmp_dir, scanning_status: "scanning"})
+      File.write!(Path.join(tmp_dir, "book.epub"), "content")
+
+      assert :ok =
+               perform_job(ScanWorker, %{
+                 "directory" => tmp_dir,
+                 "recursive" => false,
+                 "library_id" => library.id
+               })
+
+      updated_library = Libraries.get_library!(library.id)
+      # With pending ebooks, library remains in scanning status with processing stage
+      assert updated_library.scanning_status == "scanning"
+      assert updated_library.scan_progress_stage == "processing"
+      assert updated_library.scan_progress_current == 0
+      assert updated_library.scan_progress_total == 1
+      assert updated_library.last_scan_error == nil
+    end
+
+    @tag :tmp_dir
+    test "updates library status to failed on scan error", %{tmp_dir: _tmp_dir} do
+      library = library_fixture(%{path: "/nonexistent", scanning_status: "scanning"})
+
+      capture_log(fn ->
+        assert {:error, _reason} =
+                 perform_job(ScanWorker, %{
+                   "directory" => "/nonexistent",
+                   "recursive" => false,
+                   "library_id" => library.id
+                 })
+      end)
+
+      updated_library = Libraries.get_library!(library.id)
+      assert updated_library.scanning_status == "failed"
+      assert updated_library.last_scan_error != nil
+      assert updated_library.last_scan_error =~ "directory not found"
+    end
+
+    @tag :tmp_dir
+    test "works without library_id for backward compatibility", %{tmp_dir: tmp_dir} do
+      File.write!(Path.join(tmp_dir, "book.epub"), "content")
+
+      # Should not raise error when library_id not provided
+      assert :ok =
+               perform_job(ScanWorker, %{
+                 "directory" => tmp_dir,
+                 "recursive" => false
+               })
+
+      ebooks = Ebooks.list_ebooks()
+      assert length(ebooks) == 1
     end
   end
 end

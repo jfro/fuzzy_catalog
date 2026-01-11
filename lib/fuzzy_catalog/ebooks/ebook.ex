@@ -32,6 +32,9 @@ defmodule FuzzyCatalog.Ebooks.Ebook do
     # Optional relationship to Book
     belongs_to :book, FuzzyCatalog.Catalog.Book
 
+    # Optional relationship to Library
+    belongs_to :library, FuzzyCatalog.Ebooks.Library
+
     timestamps()
   end
 
@@ -54,13 +57,15 @@ defmodule FuzzyCatalog.Ebooks.Ebook do
       :processing_error,
       :last_processed_at,
       :cover_thumbnail_key,
-      :book_id
+      :book_id,
+      :library_id
     ])
     |> validate_required([:file_path, :file_format])
     |> validate_inclusion(:file_format, @file_formats)
     |> validate_inclusion(:processing_status, @processing_statuses)
     |> validate_number(:file_size, greater_than: 0)
     |> foreign_key_constraint(:book_id)
+    |> foreign_key_constraint(:library_id)
     |> unique_constraint(:file_path)
   end
 

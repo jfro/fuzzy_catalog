@@ -6,6 +6,7 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorkerTest do
 
   alias FuzzyCatalog.Ebooks.Workers.ProcessWorker
   alias FuzzyCatalog.Ebooks
+  alias FuzzyCatalog.Collections
   import FuzzyCatalog.EbooksFixtures
 
   describe "perform/1" do
@@ -33,6 +34,65 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorkerTest do
       updated = Ebooks.get_ebook!(ebook.id)
       assert updated.processing_status == "completed"
       refute is_nil(updated.last_processed_at)
+    end
+
+    @tag :tmp_dir
+    test "adds book to ebook collection", %{tmp_dir: tmp_dir} do
+      epub_path = Path.join(tmp_dir, "collection_test.epub")
+
+      create_test_epub(epub_path, %{
+        title: "Collection Test Book",
+        creator: "Collection Author"
+      })
+
+      {:ok, content} = File.read(epub_path)
+      file_hash = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: epub_path, file_hash: file_hash)
+
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      assert updated.processing_status == "completed"
+      assert updated.book_id
+
+      # Verify book was added to ebook collection
+      book = FuzzyCatalog.Catalog.get_book!(updated.book_id)
+      media_types = Collections.get_book_media_types(book)
+      assert "ebook" in media_types
+    end
+
+    @tag :tmp_dir
+    test "sets cover on Book record when processing ebook", %{tmp_dir: tmp_dir} do
+      paths =
+        create_calibre_directory_structure(tmp_dir, %{
+          title: "Book with Cover",
+          author: "Cover Author",
+          with_cover: true
+        })
+
+      {:ok, content} = File.read(paths.epub_path)
+      file_hash = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: paths.epub_path, file_hash: file_hash)
+
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      assert updated.processing_status == "completed"
+      assert updated.book_id
+      assert updated.cover_thumbnail_key
+
+      # Verify cover was also set on Book record
+      book = FuzzyCatalog.Catalog.get_book!(updated.book_id)
+      assert book.cover_image_key
+      assert book.cover_image_key == updated.cover_thumbnail_key
     end
 
     @tag :tmp_dir
@@ -87,34 +147,50 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorkerTest do
     end
 
     @tag :tmp_dir
-    test "verifies file integrity by hash", %{tmp_dir: tmp_dir} do
-      epub_path = Path.join(tmp_dir, "verify.epub")
+    test "updates hash when file is modified", %{tmp_dir: tmp_dir} do
+      epub_path = Path.join(tmp_dir, "modified.epub")
 
-      # Create file and calculate hash
-      original_content = "original content"
-      File.write!(epub_path, original_content)
+      # Create valid EPUB with initial content
+      create_test_epub(epub_path, %{
+        title: "Original Title",
+        creator: "Original Author"
+      })
+
+      {:ok, original_content} = File.read(epub_path)
       original_hash = :crypto.hash(:sha256, original_content) |> Base.encode16(case: :lower)
 
-      ebook =
-        ebook_fixture(
-          file_path: epub_path,
-          file_hash: original_hash
-        )
+      ebook = ebook_fixture(file_path: epub_path, file_hash: original_hash)
 
-      # Modify file after ebook creation
-      File.write!(epub_path, "modified content")
+      # Process first time - should work
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
 
-      # Capture expected error log
-      capture_log(fn ->
-        assert {:error, _reason} =
-                 perform_job(ProcessWorker, %{
-                   "ebook_id" => ebook.id
-                 })
+      # Now modify the file with new valid EPUB
+      create_test_epub(epub_path, %{
+        title: "Modified Title",
+        creator: "Modified Author"
+      })
 
-        updated = Ebooks.get_ebook!(ebook.id)
-        assert updated.processing_status == "failed"
-        assert updated.processing_error =~ "file hash mismatch"
-      end)
+      {:ok, new_content} = File.read(epub_path)
+      new_hash = :crypto.hash(:sha256, new_content) |> Base.encode16(case: :lower)
+
+      # Hash should be different
+      assert new_hash != original_hash
+
+      # Reprocess - should detect change and update
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      # Should have new hash and new metadata
+      assert updated.file_hash == new_hash
+      assert updated.extracted_title == "Modified Title"
+      assert updated.extracted_author == "Modified Author"
+      assert updated.processing_status == "completed"
     end
 
     @tag :tmp_dir
@@ -138,6 +214,94 @@ defmodule FuzzyCatalog.Ebooks.Workers.ProcessWorkerTest do
         assert updated.processing_status == "failed"
         assert updated.processing_error
       end)
+    end
+  end
+
+  describe "Calibre metadata integration" do
+    @tag :tmp_dir
+    test "extracts and stores OPF metadata in Book record", %{tmp_dir: tmp_dir} do
+      paths =
+        create_calibre_directory_structure(tmp_dir, %{
+          title: "The Name of the Wind",
+          author: "Patrick Rothfuss",
+          isbn: "9780756404079",
+          series: "The Kingkiller Chronicle",
+          series_index: "1.0",
+          rating: 10,
+          tags: ["Fantasy", "Epic Fantasy"],
+          publisher: "DAW Books"
+        })
+
+      {:ok, content} = File.read(paths.epub_path)
+      file_hash = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: paths.epub_path, file_hash: file_hash)
+
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      assert updated.processing_status == "completed"
+      assert updated.book_id
+
+      # Verify metadata stored in Book record, not Ebook
+      book = FuzzyCatalog.Catalog.get_book!(updated.book_id)
+      assert book.title == "The Name of the Wind"
+      assert book.author == "Patrick Rothfuss"
+      assert book.series == "The Kingkiller Chronicle"
+      assert Decimal.equal?(book.series_number, Decimal.new("1.0"))
+      assert book.rating == 10
+      assert book.tags == ["Fantasy", "Epic Fantasy"]
+      assert book.publisher == "DAW Books"
+    end
+
+    @tag :tmp_dir
+    test "extracts cover from Calibre cover.jpg", %{tmp_dir: tmp_dir} do
+      paths =
+        create_calibre_directory_structure(tmp_dir, %{
+          title: "Test Book with Cover",
+          author: "Test Author",
+          with_cover: true
+        })
+
+      {:ok, content} = File.read(paths.epub_path)
+      file_hash = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: paths.epub_path, file_hash: file_hash)
+
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      # Should have extracted and stored cover
+      assert updated.cover_thumbnail_key
+    end
+
+    @tag :tmp_dir
+    test "processes correctly when no metadata.opf exists", %{tmp_dir: tmp_dir} do
+      epub_path = Path.join(tmp_dir, "regular.epub")
+
+      create_test_epub(epub_path, %{
+        title: "Regular EPUB",
+        creator: "Author"
+      })
+
+      {:ok, content} = File.read(epub_path)
+      file_hash = :crypto.hash(:sha256, content) |> Base.encode16(case: :lower)
+
+      ebook = ebook_fixture(file_path: epub_path, file_hash: file_hash)
+
+      assert :ok =
+               perform_job(ProcessWorker, %{
+                 "ebook_id" => ebook.id
+               })
+
+      updated = Ebooks.get_ebook!(ebook.id)
+      assert updated.processing_status == "completed"
     end
   end
 

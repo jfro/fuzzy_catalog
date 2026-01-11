@@ -519,6 +519,30 @@ defmodule FuzzyCatalogWeb.CoreComponents do
             Settings
           </.link>
           <.link
+            navigate={~p"/admin/libraries"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "libraries",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            Libraries
+          </.link>
+          <.link
+            navigate={~p"/admin/ebooks"}
+            class={[
+              "px-3 py-2 text-sm font-medium rounded-md",
+              if(@current_page == "ebooks",
+                do: "bg-indigo-100 text-indigo-700",
+                else: "text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+              )
+            ]}
+          >
+            Problem Ebooks
+          </.link>
+          <.link
             navigate={~p"/admin/import-export"}
             class={[
               "px-3 py-2 text-sm font-medium rounded-md",

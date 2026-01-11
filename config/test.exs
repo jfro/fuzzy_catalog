@@ -49,3 +49,8 @@ config :fuzzy_catalog, Oban,
   testing: :manual,
   queues: false,
   plugins: false
+
+# Disable FileSystem watcher and scheduler in tests
+config :fuzzy_catalog, :ebooks,
+  watcher_enabled: false,
+  scheduler_enabled: false

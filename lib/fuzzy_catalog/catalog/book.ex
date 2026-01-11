@@ -34,6 +34,11 @@ defmodule FuzzyCatalog.Catalog.Book do
     field :original_title, :string
     field :language, :string
 
+    # Extended Metadata (from OPF files)
+    field :rating, :integer
+    field :tags, {:array, :string}
+    field :custom_metadata, :map
+
     has_many :collection_items, FuzzyCatalog.Collections.CollectionItem
 
     timestamps()
@@ -59,12 +64,16 @@ defmodule FuzzyCatalog.Catalog.Book do
       :series,
       :series_number,
       :original_title,
-      :language
+      :language,
+      :rating,
+      :tags,
+      :custom_metadata
     ])
     |> validate_required([:title, :author])
     |> validate_length(:title, min: 1, max: 255)
     |> validate_length(:author, min: 1, max: 255)
     |> validate_number(:pages, greater_than: 0)
+    |> validate_number(:rating, greater_than_or_equal_to: 0, less_than_or_equal_to: 10)
     |> validate_series_number()
     |> validate_publication_date()
   end

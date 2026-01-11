@@ -53,6 +53,24 @@ defmodule FuzzyCatalog.Ebooks do
   end
 
   @doc """
+  Lists all ebooks associated with a book.
+
+  ## Examples
+
+      iex> list_ebooks_for_book(book)
+      [%Ebook{}, ...]
+
+      iex> list_ebooks_for_book(%Book{id: 123})
+      []
+  """
+  def list_ebooks_for_book(%{id: book_id}) do
+    Ebook
+    |> where([e], e.book_id == ^book_id)
+    |> order_by([e], asc: e.file_path)
+    |> Repo.all()
+  end
+
+  @doc """
   Triggers a directory scan for ebook files.
 
   ## Options

@@ -78,6 +78,40 @@ defmodule FuzzyCatalog.EbooksTest do
     end
   end
 
+  describe "list_ebooks_for_book/1" do
+    test "returns ebooks associated with a book" do
+      book = book_fixture()
+      ebook1 = ebook_fixture(book_id: book.id, file_path: "/path/a.epub")
+      ebook2 = ebook_fixture(book_id: book.id, file_path: "/path/b.epub")
+      _other = ebook_fixture(book_id: nil)
+
+      ebooks = Ebooks.list_ebooks_for_book(book)
+
+      assert length(ebooks) == 2
+      ids = Enum.map(ebooks, & &1.id)
+      assert ebook1.id in ids
+      assert ebook2.id in ids
+    end
+
+    test "returns empty list for book with no ebooks" do
+      book = book_fixture()
+
+      assert Ebooks.list_ebooks_for_book(book) == []
+    end
+
+    test "returns ebooks ordered by file path" do
+      book = book_fixture()
+      ebook1 = ebook_fixture(book_id: book.id, file_path: "/z/book.epub")
+      ebook2 = ebook_fixture(book_id: book.id, file_path: "/a/book.epub")
+
+      ebooks = Ebooks.list_ebooks_for_book(book)
+
+      assert length(ebooks) == 2
+      assert hd(ebooks).id == ebook2.id
+      assert List.last(ebooks).id == ebook1.id
+    end
+  end
+
   describe "trigger_scan/1" do
     test "enqueues ScanWorker job" do
       assert {:ok, _job} =

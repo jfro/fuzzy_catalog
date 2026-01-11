@@ -4,6 +4,7 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
   import ExUnit.CaptureLog
 
   alias FuzzyCatalog.Ebooks.MetadataExtractor
+  alias FuzzyCatalog.EbooksFixtures
 
   describe "extract/1 for EPUB files" do
     @tag :tmp_dir
@@ -34,6 +35,21 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
       assert is_nil(metadata.author)
     end
 
+    @tag :tmp_dir
+    test "handles container.xml with namespaced elements", %{tmp_dir: tmp_dir} do
+      # Test EPUB with odfc:rootfile instead of rootfile (like some Calibre EPUBs)
+      epub_path = Path.join(tmp_dir, "namespaced.epub")
+
+      create_test_epub_with_namespaced_container(epub_path, %{
+        title: "Namespaced Test",
+        creator: "Test Author"
+      })
+
+      assert {:ok, metadata} = MetadataExtractor.extract(epub_path)
+      assert metadata.title == "Namespaced Test"
+      assert metadata.author == "Test Author"
+    end
+
     test "returns error for non-existent file" do
       assert {:error, reason} = MetadataExtractor.extract("/nonexistent.epub")
       assert reason =~ "file not found"
@@ -48,7 +64,7 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
       # Capture expected error log from attempting to parse invalid EPUB
       capture_log(fn ->
         assert {:error, reason} = MetadataExtractor.extract(path)
-        assert reason =~ "Failed to parse EPUB"
+        assert reason =~ "corrupted ZIP structure"
       end)
     end
   end
@@ -90,6 +106,78 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
     end
   end
 
+  describe "extract_opf_metadata/1" do
+    @tag :tmp_dir
+    test "extracts metadata from standalone metadata.opf file", %{tmp_dir: tmp_dir} do
+      paths =
+        EbooksFixtures.create_calibre_directory_structure(tmp_dir, %{
+          title: "The Name of the Wind",
+          author: "Patrick Rothfuss",
+          isbn: "9780756404079",
+          series: "The Kingkiller Chronicle",
+          series_index: "1.0",
+          rating: 10,
+          tags: ["Fantasy", "Epic Fantasy"]
+        })
+
+      assert {:ok, metadata} = MetadataExtractor.extract_opf_metadata(paths.epub_path)
+      assert metadata.title == "The Name of the Wind"
+      assert metadata.author == "Patrick Rothfuss"
+      assert metadata.isbn == "9780756404079"
+      assert metadata.series == "The Kingkiller Chronicle"
+      assert Decimal.equal?(metadata.series_index, Decimal.new("1.0"))
+      assert metadata.rating == 10
+      assert metadata.tags == ["Fantasy", "Epic Fantasy"]
+    end
+
+    @tag :tmp_dir
+    test "returns {:ok, nil} when no metadata.opf exists", %{tmp_dir: tmp_dir} do
+      epub_path = Path.join(tmp_dir, "test.epub")
+      create_test_epub(epub_path, %{})
+
+      assert {:ok, nil} = MetadataExtractor.extract_opf_metadata(epub_path)
+    end
+
+    @tag :tmp_dir
+    test "handles corrupted metadata.opf gracefully", %{tmp_dir: tmp_dir} do
+      epub_path = Path.join(tmp_dir, "test.epub")
+      create_test_epub(epub_path, %{})
+
+      # Create corrupted metadata.opf in same directory
+      opf_path = Path.join(tmp_dir, "metadata.opf")
+      File.write!(opf_path, "not valid xml")
+
+      capture_log(fn ->
+        assert {:error, _reason} = MetadataExtractor.extract_opf_metadata(epub_path)
+      end)
+    end
+  end
+
+  describe "extract_calibre_cover/1" do
+    @tag :tmp_dir
+    test "extracts cover.jpg from Calibre directory", %{tmp_dir: tmp_dir} do
+      paths =
+        EbooksFixtures.create_calibre_directory_structure(tmp_dir, %{
+          title: "Test Book",
+          with_cover: true
+        })
+
+      assert {:ok, cover_binary} = MetadataExtractor.extract_calibre_cover(paths.epub_path)
+      assert is_binary(cover_binary)
+      assert byte_size(cover_binary) > 0
+    end
+
+    @tag :tmp_dir
+    test "returns {:error, :no_cover} when cover.jpg doesn't exist", %{tmp_dir: tmp_dir} do
+      paths =
+        EbooksFixtures.create_calibre_directory_structure(tmp_dir, %{
+          title: "Test Book"
+        })
+
+      assert {:error, :no_cover} = MetadataExtractor.extract_calibre_cover(paths.epub_path)
+    end
+  end
+
   # Test helper functions
   defp create_test_epub(path, metadata) do
     # Create a minimal valid EPUB structure
@@ -106,6 +194,19 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
     ]
 
     # Create ZIP file (EPUB is just a ZIP with specific structure)
+    {:ok, {~c"memory", zip_data}} = :zip.create(~c"memory", files, [:memory])
+    File.write!(path, zip_data)
+  end
+
+  defp create_test_epub_with_namespaced_container(path, metadata) do
+    # Create EPUB with namespaced container.xml (like some Calibre EPUBs)
+    files = [
+      {~c"mimetype", "application/epub+zip"},
+      {~c"META-INF/container.xml", namespaced_container_xml()},
+      {~c"OEBPS/content.opf", content_opf(metadata)},
+      {~c"OEBPS/toc.ncx", toc_ncx(metadata)}
+    ]
+
     {:ok, {~c"memory", zip_data}} = :zip.create(~c"memory", files, [:memory])
     File.write!(path, zip_data)
   end
@@ -198,6 +299,18 @@ defmodule FuzzyCatalog.Ebooks.MetadataExtractorTest do
         <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
       </rootfiles>
     </container>
+    """
+  end
+
+  defp namespaced_container_xml do
+    # Container.xml with explicit namespace prefix (like some Calibre EPUBs)
+    """
+    <?xml version="1.0" encoding="utf-8" standalone="no"?>
+    <odfc:container xmlns:odfc="urn:oasis:names:tc:opendocument:xmlns:container" version="1.0">
+      <odfc:rootfiles>
+        <odfc:rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+      </odfc:rootfiles>
+    </odfc:container>
     """
   end
 
