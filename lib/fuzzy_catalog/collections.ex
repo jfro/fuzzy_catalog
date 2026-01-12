@@ -337,12 +337,20 @@ defmodule FuzzyCatalog.Collections do
     # Remove search from Flop params to avoid validation issues
     flop_params = remove_search_param(params)
 
+    # Show all books regardless of collection items or ebook files
+    # Media types are just informational and can be used for filtering
     base_query =
       from b in Book,
-        join: ci in CollectionItem,
+        left_join: ci in CollectionItem,
         on: ci.book_id == b.id,
         group_by: [b.id],
-        select: {b, fragment("array_agg(? ORDER BY ?)::text[]", ci.media_type, ci.media_type)}
+        select:
+          {b,
+           fragment(
+             "array_remove(array_agg(DISTINCT ? ORDER BY ?), NULL)::text[]",
+             ci.media_type,
+             ci.media_type
+           )}
 
     # Apply search filter if present
     query_with_search =

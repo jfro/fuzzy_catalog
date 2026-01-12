@@ -85,7 +85,7 @@ LABEL org.opencontainers.image.licenses=MIT
 RUN echo "[$BUILD_TIME] [$GITREF] building on host that is $BUILDPLATFORM, for the target architecture $TARGETPLATFORM" > /build.log
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates \
+    && apt-get install -y --no-install-recommends libstdc++6 openssl libncurses5 locales ca-certificates poppler-utils \
     && rm -rf /var/lib/apt/lists/*
 
 # Set the locale

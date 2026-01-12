@@ -97,6 +97,143 @@ config :phoenix, :json_library, Jason
 # Configure Flop
 config :flop, repo: FuzzyCatalog.Repo
 
+# Oban configuration for background job processing
+config :fuzzy_catalog, Oban,
+  repo: FuzzyCatalog.Repo,
+  queues: [
+    # One concurrent scan job at a time
+    ebook_scan: 1,
+    # Up to 10 files can be processed concurrently
+    ebook_process: 10
+  ],
+  plugins: [
+    # Keep jobs for 7 days
+    {Oban.Plugins.Pruner, max_age: 86400 * 7},
+    # No cron jobs initially
+    {Oban.Plugins.Cron, crontab: []}
+  ]
+
+# Oban Web configuration for the dashboard
+config :fuzzy_catalog, Oban.Web.Resolver, pubsub: FuzzyCatalog.PubSub
+
+config :oban, :notifier, pubsub: FuzzyCatalog.PubSub
+
+# =====================================================
+# Ebook Management Configuration
+# =====================================================
+#
+# This section configures the ebook library management system, including:
+# - File format support and limits
+# - Fuzzy matching for book linking
+# - Automatic filesystem watching (auto_watch mode)
+# - Scheduled scanning (scheduled mode)
+#
+# See lib/fuzzy_catalog/ebooks/library.ex for scan mode details
+
+config :fuzzy_catalog, :ebooks,
+  # Supported file formats for ebook scanning
+  # Only files with these extensions will be processed during scans
+  supported_formats: ["epub", "pdf"],
+
+  # Maximum file size in bytes (100MB default)
+  # Files larger than this will be skipped during scanning
+  max_file_size: 100 * 1024 * 1024,
+
+  # Enable fuzzy matching for book linking by default
+  # When true, uses fuzzy string matching to link ebooks to existing books
+  enable_fuzzy_matching: true,
+
+  # Fuzzy matching threshold (0.0 - 1.0) - higher means stricter matching
+  # 0.85 means 85% similarity required to consider a match
+  fuzzy_threshold: 0.85,
+
+  # FileSystem watcher configuration (for auto_watch mode)
+  # When enabled, monitors library directories for file changes
+  # Set to false in test environment to prevent interference
+  watcher_enabled: true,
+
+  # Debounce delay in milliseconds (wait for 5 seconds of no changes before scanning)
+  # This prevents rapid-fire scans during bulk file operations
+  # Libraries in auto_watch mode will wait this long after the last file change
+  watcher_debounce_ms: 5000,
+
+  # Library scheduler configuration (for scheduled mode)
+  # When enabled, processes libraries with cron-based schedules
+  # Set to false in test environment to prevent interference
+  scheduler_enabled: true
+
+# Note: Calibre library support is automatic - metadata.opf and cover.jpg
+# files are automatically detected and parsed when found alongside ebook files
+
+# =====================================================
+# Library Management Workflow
+# =====================================================
+#
+# ## Creating a Library
+#
+# 1. Navigate to /admin/libraries (admin users only)
+# 2. Click "New Library"
+# 3. Enter library name
+# 4. Use "Browse" button to select directory path via tree picker
+# 5. Choose scan mode:
+#    - Manual: Trigger scans via "Scan Now" button
+#    - Auto Watch: Automatic scans when files change (5s debounce)
+#    - Scheduled: Scans on cron schedule (e.g., "0 */6 * * *")
+# 6. If scheduled mode, enter cron expression
+# 7. Click "Create"
+#
+# ## Scan Modes Explained
+#
+# ### Manual Mode
+# - Scans only when you click "Scan Now" button
+# - Best for: One-time imports, testing, infrequent updates
+# - No background processes required
+#
+# ### Auto Watch Mode
+# - Monitors directory for file changes using FileSystem library
+# - Automatically triggers scan 5 seconds after last change
+# - Best for: Active libraries with frequent additions
+# - Requires: watcher_enabled: true (default)
+# - Background process: LibraryWatcher GenServer
+#
+# ### Scheduled Mode
+# - Runs scans on a cron schedule (e.g., every 6 hours)
+# - Cron format: minute hour day month weekday
+# - Examples:
+#   - "0 */6 * * *" = every 6 hours
+#   - "0 0 * * *" = daily at midnight
+#   - "0 9 * * 1" = Mondays at 9am
+# - Best for: Stable libraries with predictable update patterns
+# - Requires: scheduler_enabled: true (default)
+# - Background process: LibraryScheduler GenServer
+#
+# ## How Scanning Works
+#
+# 1. Library is marked as "scanning" to prevent concurrent scans
+# 2. ScanWorker job is enqueued in Oban
+# 3. ScanWorker recursively scans directory for .epub and .pdf files
+# 4. For each ebook file:
+#    - Extract metadata (title, author, ISBN, etc.)
+#    - Create or update Ebook record
+#    - Link to Library via library_id
+#    - If Calibre metadata.opf exists, parse it for rich metadata
+# 5. Library status updated to "idle" or "failed"
+# 6. last_scanned_at timestamp recorded
+#
+# ## Error Handling
+#
+# - If scan fails, library status set to "failed"
+# - Error message stored in last_scan_error field
+# - Can retry by clicking "Scan Now" or waiting for next scheduled scan
+# - Failed status does not prevent future scans
+#
+# ## Concurrent Scan Prevention
+#
+# - Only one scan can run per library at a time
+# - scanning_status field acts as a lock
+# - Manual, auto_watch, and scheduled modes all check this status
+# - "Scan Now" button disabled while scanning in progress
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

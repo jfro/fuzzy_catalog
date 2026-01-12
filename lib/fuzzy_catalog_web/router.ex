@@ -2,6 +2,7 @@ defmodule FuzzyCatalogWeb.Router do
   use FuzzyCatalogWeb, :router
 
   import FuzzyCatalogWeb.UserAuth
+  import FuzzyCatalogWeb.UserAdminAuth
 
   pipeline :browser do
     plug :accepts, ["html"]
@@ -15,6 +16,22 @@ defmodule FuzzyCatalogWeb.Router do
 
   pipeline :api do
     plug :accepts, ["json"]
+  end
+
+  pipeline :oban do
+    plug :accepts, ["html"]
+    plug :fetch_session
+    plug :fetch_live_flash
+    plug :put_root_layout, html: {FuzzyCatalogWeb.Layouts, :root}
+    plug :protect_from_forgery
+
+    plug :put_secure_browser_headers, %{
+      "content-security-policy" => "default-src 'self' 'unsafe-inline' 'unsafe-eval'"
+    }
+
+    plug :fetch_current_scope_for_user
+    plug :require_authenticated_user
+    plug :require_admin
   end
 
   scope "/", FuzzyCatalogWeb do
@@ -76,12 +93,21 @@ defmodule FuzzyCatalogWeb.Router do
     get "/users/settings/confirm-account/:token", UserSettingsController, :confirm_account
   end
 
+  # Oban Web Dashboard (separate scope for CSP)
+  scope "/admin" do
+    pipe_through :oban
+    import Oban.Web.Router
+    oban_dashboard("/oban")
+  end
+
   scope "/admin", FuzzyCatalogWeb do
-    pipe_through [:browser, :require_authenticated_user]
+    pipe_through [:browser, :require_authenticated_user, :require_admin]
 
     live "/", AdminLive, :index
     live "/users", AdminUsersLive, :index
     live "/settings", AdminSettingsLive, :index
+    live "/libraries", AdminLibrariesLive, :index
+    live "/ebooks", AdminEbooksLive, :index
 
     # Import/Export routes
     get "/import-export", ImportExportController, :index

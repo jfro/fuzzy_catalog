@@ -7,18 +7,40 @@ defmodule FuzzyCatalog.Application do
 
   @impl true
   def start(_type, _args) do
-    children = [
-      FuzzyCatalogWeb.Telemetry,
-      FuzzyCatalog.Repo,
-      {DNSCluster, query: Application.get_env(:fuzzy_catalog, :dns_cluster_query) || :ignore},
-      {Phoenix.PubSub, name: FuzzyCatalog.PubSub},
-      FuzzyCatalog.SyncStatusManager,
-      FuzzyCatalog.ProviderScheduler,
-      # Start a worker by calling: FuzzyCatalog.Worker.start_link(arg)
-      # {FuzzyCatalog.Worker, arg},
-      # Start to serve requests, typically the last entry
-      FuzzyCatalogWeb.Endpoint
-    ]
+    # Conditionally start LibraryWatcher based on config
+    library_watcher_child =
+      if watcher_enabled?() do
+        [FuzzyCatalog.Ebooks.LibraryWatcher]
+      else
+        []
+      end
+
+    # Conditionally start LibraryScheduler based on config
+    library_scheduler_child =
+      if scheduler_enabled?() do
+        [FuzzyCatalog.Ebooks.LibraryScheduler]
+      else
+        []
+      end
+
+    children =
+      [
+        FuzzyCatalogWeb.Telemetry,
+        FuzzyCatalog.Repo,
+        {Oban, Application.fetch_env!(:fuzzy_catalog, Oban)},
+        {DNSCluster, query: Application.get_env(:fuzzy_catalog, :dns_cluster_query) || :ignore},
+        {Phoenix.PubSub, name: FuzzyCatalog.PubSub},
+        FuzzyCatalog.SyncStatusManager,
+        FuzzyCatalog.ProviderScheduler
+      ] ++
+        library_watcher_child ++
+        library_scheduler_child ++
+        [
+          # Start a worker by calling: FuzzyCatalog.Worker.start_link(arg)
+          # {FuzzyCatalog.Worker, arg},
+          # Start to serve requests, typically the last entry
+          FuzzyCatalogWeb.Endpoint
+        ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
@@ -32,5 +54,15 @@ defmodule FuzzyCatalog.Application do
   def config_change(changed, _new, removed) do
     FuzzyCatalogWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp watcher_enabled? do
+    Application.get_env(:fuzzy_catalog, :ebooks, [])
+    |> Keyword.get(:watcher_enabled, true)
+  end
+
+  defp scheduler_enabled? do
+    Application.get_env(:fuzzy_catalog, :ebooks, [])
+    |> Keyword.get(:scheduler_enabled, true)
   end
 end

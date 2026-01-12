@@ -360,4 +360,41 @@ defmodule FuzzyCatalogWeb.BookHTML do
   def safe_cover_url(%{"url" => url}) when is_binary(url), do: url
   def safe_cover_url(url) when is_binary(url), do: url
   def safe_cover_url(_), do: ""
+
+  @doc """
+  Formats a file size in bytes to a human-readable string.
+
+  ## Examples
+
+      iex> format_file_size(1024)
+      "1.0 KB"
+
+      iex> format_file_size(1_048_576)
+      "1.0 MB"
+
+      iex> format_file_size(500)
+      "500 B"
+
+      iex> format_file_size(nil)
+      "Unknown"
+  """
+  def format_file_size(nil), do: "Unknown"
+  def format_file_size(bytes) when is_integer(bytes) and bytes < 1024, do: "#{bytes} B"
+
+  def format_file_size(bytes) when is_integer(bytes) and bytes < 1_048_576 do
+    kb = Float.round(bytes / 1024, 1)
+    "#{kb} KB"
+  end
+
+  def format_file_size(bytes) when is_integer(bytes) and bytes < 1_073_741_824 do
+    mb = Float.round(bytes / 1_048_576, 1)
+    "#{mb} MB"
+  end
+
+  def format_file_size(bytes) when is_integer(bytes) do
+    gb = Float.round(bytes / 1_073_741_824, 1)
+    "#{gb} GB"
+  end
+
+  def format_file_size(_), do: "Unknown"
 end

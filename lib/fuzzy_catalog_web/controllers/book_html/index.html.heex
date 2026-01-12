@@ -15,6 +15,19 @@
   </.header>
 
   <div class="mb-6 space-y-4">
+    <%!-- Book Count Display --%>
+    <div class="flex items-center gap-2 text-sm text-base-content/70">
+      <.icon name="hero-book-open" class="h-4 w-4" />
+      <span class="font-medium">
+        {@meta.total_count} {if @meta.total_count == 1, do: "book", else: "books"}
+      </span>
+      <%= if has_search_filter?(@meta) do %>
+        <span class="text-base-content/50">
+          (filtered)
+        </span>
+      <% end %>
+    </div>
+
     <div class="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
       <form method="get" action={~p"/books"} class="flex gap-2 items-end flex-1 max-w-2xl">
         <div class="flex-1">
